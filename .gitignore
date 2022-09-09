@@ -1,0 +1,13 @@
+bin/
+*.class
+target/
+target/*
+*.venv
+*/venv
+*__pycache__*
+.factorypath
+.idea/
+.classpath
+.project
+settings.xml
+logs
