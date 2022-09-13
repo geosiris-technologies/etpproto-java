@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class StoreHandler_DefaultPrinter extends StoreHandler{
-	public static Logger logger = LogManager.getLogger(StoreHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(StoreHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_Chunk(Chunk msg, MessageHeader msgHeader, ClientInfo clientInfo) {

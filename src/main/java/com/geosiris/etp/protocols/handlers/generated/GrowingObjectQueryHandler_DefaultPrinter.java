@@ -27,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class GrowingObjectQueryHandler_DefaultPrinter extends GrowingObjectQueryHandler{
-	public static Logger logger = LogManager.getLogger(GrowingObjectQueryHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(GrowingObjectQueryHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_FindParts(FindParts msg, MessageHeader msgHeader, ClientInfo clientInfo) {

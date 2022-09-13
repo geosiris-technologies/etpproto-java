@@ -16,7 +16,6 @@ limitations under the License.
 package com.geosiris.etp.utils;
 
 import Energistics.Etp.v12.Datatypes.DataArrayTypes.DataArrayIdentifier;
-import Energistics.Etp.v12.Datatypes.DataValue;
 import Energistics.Etp.v12.Datatypes.Object.*;
 import Energistics.Etp.v12.Datatypes.SupportedDataObject;
 import Energistics.Etp.v12.Datatypes.Uuid;
@@ -34,22 +33,23 @@ import org.apache.logging.log4j.Logger;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 public class ETPDefaultProtocolBuilder {
-	public static Logger logger = LogManager.getLogger(ETPDefaultProtocolBuilder.class);
+	public static final Logger logger = LogManager.getLogger(ETPDefaultProtocolBuilder.class);
 
 	public static RequestSession buildRequestSession(Uuid uuid) {
 		List<SupportedDataObject> supportedDataObjects = new ArrayList<>();
 
 
-		Map<CharSequence, DataValue> supportedList = new HashMap<>();
-		supportedList.put("resqml20", DataValue.newBuilder().setItem(null).build());
-		SupportedDataObject sdo = SupportedDataObject.newBuilder()
-				.setDataObjectCapabilities(supportedList)
-				.setQualifiedType("resqml20")
-				.build();
+//		Map<CharSequence, DataValue> supportedList = new HashMap<>();
+//		supportedList.put("resqml20", DataValue.newBuilder().setItem(null).build());
+//		SupportedDataObject sdo = SupportedDataObject.newBuilder()
+//				.setDataObjectCapabilities(supportedList)
+//				.setQualifiedType("resqml20")
+//				.build();
 //		supportedDataObjects.add(sdo);
 
 		List<CharSequence> supportedCompression = new ArrayList<>();
@@ -108,24 +108,22 @@ public class ETPDefaultProtocolBuilder {
 		if(uri == null) {
 			uri = "eml:///";
 		}
-		GetResources getRess = 
-				GetResources.newBuilder()
-				.setContext(ContextInfo.newBuilder()
-						.setDataObjectTypes(objectTypes)
-						.setDepth(depth)
-						.setUri(uri)
-						.setNavigableEdges(RelationshipKind.Primary)
-						.setIncludeSecondarySources(false)
-						.setIncludeSecondaryTargets(false)
-						.build())
-				.setScope(scope)
-				.setStoreLastWriteFilter(null)
-				.setActiveStatusFilter(null)
-				.setCountObjects(true)
-				.setIncludeEdges(false)
-				.build();
-//		logger.error(getRess);
-		return getRess;
+		//		logger.error(getRess);
+		return GetResources.newBuilder()
+		.setContext(ContextInfo.newBuilder()
+				.setDataObjectTypes(objectTypes)
+				.setDepth(depth)
+				.setUri(uri)
+				.setNavigableEdges(RelationshipKind.Primary)
+				.setIncludeSecondarySources(false)
+				.setIncludeSecondaryTargets(false)
+				.build())
+		.setScope(scope)
+		.setStoreLastWriteFilter(null)
+		.setActiveStatusFilter(null)
+		.setCountObjects(true)
+		.setIncludeEdges(false)
+		.build();
 	}
 
 	public static DeleteDataObjects buildDeleteDataObjects(Map<CharSequence, CharSequence> uris) {
@@ -149,7 +147,7 @@ public class ETPDefaultProtocolBuilder {
 	}
 
 	public static DataObject buildDataObjectFromResqmlXMl(String xml, String uuid, Resource resource) {
-		ByteBuffer bf  = ByteBuffer.wrap(xml.getBytes(charset));
+		ByteBuffer bf  = ByteBuffer.wrap(xml.getBytes(CHARSET));
 		return DataObject.newBuilder()
 				.setResource(resource)
 				.setFormat("xml")
@@ -158,16 +156,16 @@ public class ETPDefaultProtocolBuilder {
 				.build();
 	}
 
-	private static Pattern regexpUUID_inURI = Pattern.compile("\\(([0-9a-zA-Z\\-]+)\\)");
+	private final static Pattern REGEXP_UUID_IN_URI = Pattern.compile("\\(([\\da-zA-Z\\-]+)\\)");
 	
-	private static Pattern regexpUUID = Pattern.compile("[Uu][Uu][Ii][Dd]\\s*=\\s*\"[^\"]+\"");
-	private static Charset charset = Charset.forName("UTF-8");
+	private final static Pattern REGEXP_UUID = Pattern.compile("[Uu][Uu][Ii][Dd]\\s*=\\s*\"[^\"]+\"");
+	private final static Charset CHARSET = StandardCharsets.UTF_8;
 
 	public static PutDataObjects buildPutDataObjects(List<Pair<String, Resource>> resqmlXmlData, 
 			boolean prune) {
 		Map<CharSequence, DataObject> map = new HashMap<>();
 		for(Pair<String, Resource> xmlNres : resqmlXmlData) {
-			Matcher match = regexpUUID_inURI.matcher(xmlNres.r().getUri());
+			Matcher match = REGEXP_UUID_IN_URI.matcher(xmlNres.r().getUri());
 			if(match.find()) {
 				String uuid = match.group(1);
 				DataObject data = buildDataObjectFromResqmlXMl(xmlNres.l(), uuid, xmlNres.r());
@@ -180,7 +178,7 @@ public class ETPDefaultProtocolBuilder {
 
 	public static PutDataObjects buildPutDataObjects(String xmlContent, Resource resource, boolean prune) {
 		List<Pair<String, Resource>> resList = new ArrayList<>();
-		resList.add(new Pair<String, Resource>(xmlContent, resource));
+		resList.add(new Pair<>(xmlContent, resource));
 		return buildPutDataObjects(resList, prune);
 	}
 	
@@ -202,7 +200,7 @@ public class ETPDefaultProtocolBuilder {
 	
 
 	public static GetDataArrayMetadata buildGetDataArrayMetadata(List<DataArrayIdentifier> identifierList) {
-		Map<CharSequence, DataArrayIdentifier> map = new HashMap<CharSequence, DataArrayIdentifier>();
+		Map<CharSequence, DataArrayIdentifier> map = new HashMap<>();
 		for(DataArrayIdentifier dai: identifierList) {
 			map.put("req_dai_" + map.size(), dai);
 		}

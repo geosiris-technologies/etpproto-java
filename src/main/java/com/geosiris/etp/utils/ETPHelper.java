@@ -32,15 +32,13 @@ import org.apache.avro.specific.SpecificRecordBase;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 public class ETPHelper {
-	public static Logger logger = LogManager.getLogger(ETPHelper.class);
+	public static final Logger logger = LogManager.getLogger(ETPHelper.class);
 	/* PuDataObjects */
 
 	public static List<Message> sendPutDataObjects_from_file(ETPClient etpClient, List<String> filePaths, String dataspace, int timeoutMS){
@@ -48,16 +46,16 @@ public class ETPHelper {
 			List<Pair<String, Resource>> ressource_list = new ArrayList<>();
 			List<String> filesContent = new ArrayList<>();
 			for (String filePath : filePaths) {
-				String fileContent = "";
+				StringBuilder fileContent = new StringBuilder();
 				try {
 					File myObj = new File(filePath);
 					Scanner myReader = new Scanner(myObj);
 					while (myReader.hasNextLine()) {
 						String data = myReader.nextLine();
-						fileContent += data;
+						fileContent.append(data);
 					}
 					myReader.close();
-					filesContent.add(fileContent);
+					filesContent.add(fileContent.toString());
 				} catch (FileNotFoundException e1) {
 					logger.error(e1.getMessage());
 					logger.debug(e1.getMessage(), e1);
@@ -79,6 +77,7 @@ public class ETPHelper {
 					logger.error(e.getMessage(), e);
 				}
 				Date d = new Date();
+				assert xmlDoc != null;
 				Resource fResource = Resource.newBuilder()
 						.setAlternateUris(new ArrayList<>())
 						.setCustomData(new HashMap<>())
@@ -210,10 +209,9 @@ public class ETPHelper {
 				.build();
 		long getRess_id = etpClient.send(getRess);
 //		logger.info(getRess_id+") Waiting for GetResources answer");
-		List<Message> ressResp_l = etpClient.getEtpClientSession().waitForResponse(getRess_id, timeoutMS);
-//		logger.info(getRess_id+") Answer : " + ressResp_l);
+		//		logger.info(getRess_id+") Answer : " + ressResp_l);
 
-		return ressResp_l;
+		return etpClient.getEtpClientSession().waitForResponse(getRess_id, timeoutMS);
 	}
 
 	/**
@@ -329,23 +327,13 @@ public class ETPHelper {
 			logger.debug(e.getMessage(), e);
 		}
 		return result;
-
-//		GetDataArrays gda = GetDataArrays.newBuilder()
-//				.setDataArrays(mapIdentifier).build();
-//		long msg_id = etpClient.send(gda);
-//		return etpClient.getEtpClientSession().waitForResponse(msg_id, timeoutMS);
 	}
 
 	public static Long sendGetDataSubArray_nowait(ETPClient etpClient, String uri, String pathInHDF5, Long[] start, Long[] count){
-		List<Message> result = new ArrayList<>();
-
 		DataArrayIdentifier identifier = DataArrayIdentifier.newBuilder()
 				.setUri(uri)
 				.setPathInResource(pathInHDF5)
 				.build();
-
-		Map<CharSequence, DataArrayIdentifier> mapIdentifier = new HashMap<>();
-		mapIdentifier.put("0", identifier);
 
 		Map<CharSequence, GetDataSubarraysType> mapSubArrType = new HashMap<>();
 		mapSubArrType.put("0", GetDataSubarraysType.newBuilder()
@@ -359,8 +347,8 @@ public class ETPHelper {
 				.build();
 		long msgId = etpClient.send(gdsa);
 		logger.info(msgId + ") GetDataSubArray : on" + pathInHDF5
-				+ "start [ " + Arrays.asList(start).stream().map(a -> a + " ").reduce("", (a,b) -> a+b) + "]"
-				+ " count [ " + Arrays.asList(count).stream().map(a -> a + " ").reduce("", (a,b) -> a+b) + "]");
+				+ "start [ " + Arrays.stream(start).map(a -> a + " ").reduce("", (a, b) -> a+b) + "]"
+				+ " count [ " + Arrays.stream(count).map(a -> a + " ").reduce("", (a,b) -> a+b) + "]");
 
 		return msgId;
 	}
@@ -401,8 +389,6 @@ public class ETPHelper {
 	}
 
 	public static List<Message> sendGetDataArray(ETPClient etpClient, String uri, String pathInHDF5, int timeoutMS){
-		List<Message> result = new ArrayList<>();
-
 		DataArrayIdentifier identifier = DataArrayIdentifier.newBuilder()
 				.setUri(uri)
 				.setPathInResource(pathInHDF5)
@@ -421,7 +407,7 @@ public class ETPHelper {
 	public static List<AnyArray> sendGetDataArray_pretty(ETPClient etpClient, String uri, String pathInHDF5, int timeoutMS, boolean useSubArrays){
 		List<AnyArray> result = new ArrayList<>();
 
-		List<Message> msgs = null;
+		List<Message> msgs;
 		if(useSubArrays){
 			msgs = sendGetDataArray_withSubArray(etpClient, uri, pathInHDF5, timeoutMS);
 		}else{
@@ -455,7 +441,7 @@ public class ETPHelper {
 		List<Number> allPoints = new ArrayList<>();
 		for(AnyArray ar: allArrays){
 			try {
-				allPoints.addAll((List<Number>) ETPUtils.getAttributeValue(ETPUtils.getAttributeValue(ar, "item"), "values"));
+				allPoints.addAll((List<Number>) Objects.requireNonNull(ETPUtils.getAttributeValue(Objects.requireNonNull(ETPUtils.getAttributeValue(ar, "item")), "values")));
 			}catch (Exception e){
 				logger.error(e.getMessage());
 				logger.debug(e.getMessage(), e);
@@ -483,24 +469,4 @@ public class ETPHelper {
 		return etpClient.getEtpClientSession().waitForResponse(msg_id, timeoutMS);
 	}
 
-	public static <T> List<Message> sendPutDataArray(ETPClient etpClient, String uri, String pathInHDF5, List<T> data, int timeoutMS){
-		DataArray da = DataArray.newBuilder()
-				.setData(convertArray(data)).build();
-		return sendPutDataArray(etpClient, uri, pathInHDF5, da, timeoutMS);
-	}
-
-	public static <T> AnyArray convertArray(List<T> array){
-		T instance = null;
-		String className = instance.getClass().getSimpleName();
-		try {
-			Class<? extends SpecificRecordBase> cl = (Class<? extends SpecificRecordBase>) Class.forName(ArrayOfFloat.class.getName().substring(0, ArrayOfFloat.class.getName().lastIndexOf(".") + 1) + className);
-			SpecificRecordBase result = cl.getConstructor().newInstance(array);
-			return AnyArray.newBuilder()
-					.setItem(result).build();
-		} catch (Exception e) {
-			logger.error(e.getMessage());
-			logger.debug(e.getMessage(), e);
-		}
-		return null;
-	}
 }

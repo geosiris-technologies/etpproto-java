@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class DiscoveryHandler_DefaultPrinter extends DiscoveryHandler{
-	public static Logger logger = LogManager.getLogger(DiscoveryHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(DiscoveryHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_GetDeletedResources(GetDeletedResources msg, MessageHeader msgHeader, ClientInfo clientInfo) {

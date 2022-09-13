@@ -8,7 +8,7 @@
 
 ## Features
 
-An client to communicate with ETP standard (v2)
+A simple client to communicate with ETP standard (v2)
 
 ## Requirements
 
@@ -27,3 +27,17 @@ This project is licensed under the Apache 2.0 License - see the `LICENSE` file f
 ## Support
 
 Please enter an issue in the repo for any questions or problems.
+
+## Example : 
+
+You can try the client locally with command line.
+
+First, compile using *Example* profile :
+```console
+mvn clean package -P Example
+```
+
+Then launch the client : 
+```console
+java -jar ./target/etpproto-java-[PROJECT_VERSION]-jar-with-dependencies.jar ws://[YOUR_DOMAIN]:[YOUR_PORT]/[SUB_PATH]/ [LOGIN] [PASSWORD]
+```

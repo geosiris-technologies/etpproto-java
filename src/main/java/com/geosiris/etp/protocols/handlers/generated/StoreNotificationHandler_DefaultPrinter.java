@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class StoreNotificationHandler_DefaultPrinter extends StoreNotificationHandler{
-	public static Logger logger = LogManager.getLogger(StoreNotificationHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(StoreNotificationHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_Chunk(Chunk msg, MessageHeader msgHeader, ClientInfo clientInfo) {

@@ -29,7 +29,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class GrowingObjectQueryHandler extends ProtocolHandler{
-	public static Logger logger = LogManager.getLogger(GrowingObjectQueryHandler.class);
+	public static final Logger logger = LogManager.getLogger(GrowingObjectQueryHandler.class);
 
     public static final CommunicationProtocol protocol = CommunicationProtocol.GROWING_OBJECT_QUERY;
 

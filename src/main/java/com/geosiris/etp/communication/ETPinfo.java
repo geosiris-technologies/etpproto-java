@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 public class ETPinfo {
-	public static Logger logger = LogManager.getLogger(ETPinfo.class);
+	public static final Logger logger = LogManager.getLogger(ETPinfo.class);
 	
 	public final static Version ETP_VERSION = getETPVersion();
 	

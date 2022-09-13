@@ -28,7 +28,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class GrowingObjectNotificationHandler extends ProtocolHandler{
-	public static Logger logger = LogManager.getLogger(GrowingObjectNotificationHandler.class);
+	public static final Logger logger = LogManager.getLogger(GrowingObjectNotificationHandler.class);
 
     public static final CommunicationProtocol protocol = CommunicationProtocol.GROWING_OBJECT_NOTIFICATION;
 

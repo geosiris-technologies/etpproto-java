@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class DataArrayHandler_DefaultPrinter extends DataArrayHandler{
-	public static Logger logger = LogManager.getLogger(DataArrayHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(DataArrayHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_GetDataArrayMetadata(GetDataArrayMetadata msg, MessageHeader msgHeader, ClientInfo clientInfo) {

@@ -37,8 +37,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
-public class ETPClient extends WebSocketAdapter implements Runnable{
-	public static Logger logger = LogManager.getLogger(ETPClient.class);
+public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseable{
+	public static final Logger logger = LogManager.getLogger(ETPClient.class);
 
 	public static long MAX_PAYLOAD_SIZE = 65000;
 	private static MessageEncoding encoding = MessageEncoding.BINARY;
@@ -175,7 +175,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable{
 		logger.info("Sending : " + msg.getBody().getClass().getSimpleName());
 		long msgId = msg.getHeader().getMessageId() < 0 ? etpConnection.consumeMessageId() : msg.getHeader().getMessageId();
 		msg.getHeader().setMessageId(msgId);
-		for(byte[] b_msg : msg.encodeMessage(etpConnection.getClientInfo().maxWebSocketMessagePayloadSize, etpConnection))
+		for(byte[] b_msg : msg.encodeMessage(etpConnection.getClientInfo().MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE, etpConnection))
 			etpClientSession.addPendingMessage(b_msg);
 		return msgId;
 	}
@@ -361,8 +361,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable{
 	}
 
 	@Override
-	protected void finalize() throws Throwable {
-		super.finalize();
+	public void close() throws Exception {
 		if(isConnected()) {
 			etpClientSession.close("Finished");
 			etpConnection.setConnected(false);

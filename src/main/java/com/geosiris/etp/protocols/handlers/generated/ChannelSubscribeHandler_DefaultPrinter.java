@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class ChannelSubscribeHandler_DefaultPrinter extends ChannelSubscribeHandler{
-	public static Logger logger = LogManager.getLogger(ChannelSubscribeHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(ChannelSubscribeHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_CancelGetRanges(CancelGetRanges msg, MessageHeader msgHeader, ClientInfo clientInfo) {

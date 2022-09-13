@@ -28,7 +28,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class StoreNotificationHandler extends ProtocolHandler{
-	public static Logger logger = LogManager.getLogger(StoreNotificationHandler.class);
+	public static final Logger logger = LogManager.getLogger(StoreNotificationHandler.class);
 
     public static final CommunicationProtocol protocol = CommunicationProtocol.STORE_NOTIFICATION;
 

@@ -22,30 +22,30 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 public class ETPUri {
-	public static Logger logger = LogManager.getLogger(ETPUri.class);
+	public static final Logger logger = LogManager.getLogger(ETPUri.class);
 
     // Patterns names
-    public static final String rgx_grp_domain = "domain";
-    public static final String rgx_grp_domainVersion = "domainVersion";
-    public static final String rgx_grp_uuid = "uuid";
-    public static final String rgx_grp_dataspace = "dataspace";
-    public static final String rgx_grp_version = "version";
-    public static final String rgx_grp_objectType = "objectType";
-    public static final String rgx_grp_uuid2 = "uuid2";
-    public static final String rgx_grp_collectionDomain = "collectionDomain";
-    public static final String rgx_grp_collectionDomainVersion = "collectionDomainVersion";
-    public static final String rgx_grp_collectionType = "collectionType";
-    public static final String rgx_grp_query = "query";
+    public static final String RGX_GRP_DOMAIN = "domain";
+    public static final String RGX_GRP_DOMAIN_VERSION = "domainVersion";
+    public static final String RGX_GRP_UUID = "uuid";
+    public static final String RGX_GRP_DATASPACE = "dataspace";
+    public static final String RGX_GRP_VERSION = "version";
+    public static final String RGX_GRP_OBJECT_TYPE = "objectType";
+    public static final String RGX_GRP_UUID2 = "uuid2";
+    public static final String RGX_GRP_COLLECTION_DOMAIN = "collectionDomain";
+    public static final String RGX_GRP_COLLECTION_DOMAIN_VERSION = "collectionDomainVersion";
+    public static final String RGX_GRP_COLLECTION_TYPE = "collectionType";
+    public static final String RGX_GRP_QUERY = "query";
 
     // Patterns
     private static final String _rgx_pkgName = "[a-zA-Z]+\\w+"; //witsml|resqml|prodml|eml
-    public static final String rgx_uri = "^eml:\\/\\/\\/(?:dataspace\\('(?<" + rgx_grp_dataspace + ">[^']*?(?:''[^']*?)*)'\\)\\/?)?((?<" + rgx_grp_domain + ">" + _rgx_pkgName
-            + ")(?<" + rgx_grp_domainVersion + ">[1-9]\\d)\\.(?<" + rgx_grp_objectType + ">\\w+)(\\((?:(?<" + rgx_grp_uuid
-            + ">(uuid=)?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})|uuid=(?<" + rgx_grp_uuid2
-            + ">[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}),\\s*version='(?<" + rgx_grp_version
-            + ">[^']*?(?:''[^']*?)*)')\\))?)?(\\/(?<" + rgx_grp_collectionDomain + ">" + _rgx_pkgName + ")(?<"
-            + rgx_grp_collectionDomainVersion + ">[1-9]\\d)\\.(?<" + rgx_grp_collectionType + ">\\w+))?(?:\\?(?<"
-            + rgx_grp_query + ">[^#]+))?$";
+    public static final String rgx_uri = "^eml:\\/\\/\\/(?:dataspace\\('(?<" + RGX_GRP_DATASPACE + ">[^']*?(?:''[^']*?)*)'\\)\\/?)?((?<" + RGX_GRP_DOMAIN + ">" + _rgx_pkgName
+            + ")(?<" + RGX_GRP_DOMAIN_VERSION + ">[1-9]\\d)\\.(?<" + RGX_GRP_OBJECT_TYPE + ">\\w+)(\\((?:(?<" + RGX_GRP_UUID
+            + ">(uuid=)?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})|uuid=(?<" + RGX_GRP_UUID2
+            + ">[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}),\\s*version='(?<" + RGX_GRP_VERSION
+            + ">[^']*?(?:''[^']*?)*)')\\))?)?(\\/(?<" + RGX_GRP_COLLECTION_DOMAIN + ">" + _rgx_pkgName + ")(?<"
+            + RGX_GRP_COLLECTION_DOMAIN_VERSION + ">[1-9]\\d)\\.(?<" + RGX_GRP_COLLECTION_TYPE + ">\\w+))?(?:\\?(?<"
+            + RGX_GRP_QUERY + ">[^#]+))?$";
 
 
     // Attributes
@@ -109,16 +109,16 @@ public class ETPUri {
         Pattern puri = Pattern.compile(rgx_uri);
         Matcher m = puri.matcher(uri);
         if(m.find()){
-            res.dataspace = m.group(rgx_grp_dataspace);
-            res.domain = m.group(rgx_grp_domain);
-            res.domainVersion = m.group(rgx_grp_domainVersion);
-            res.objectType = m.group(rgx_grp_objectType);
-            res.uuid = m.group(rgx_grp_uuid) != null ? m.group(rgx_grp_uuid) : m.group(rgx_grp_uuid2);
-            res.version = m.group(rgx_grp_version);
-            res.collectionDomain = m.group(rgx_grp_collectionDomain);
-            res.collectionDomainVersion = m.group(rgx_grp_collectionDomainVersion);
-            res.collectionDomainType = m.group(rgx_grp_collectionType);
-            res.query = m.group(rgx_grp_query);
+            res.dataspace = m.group(RGX_GRP_DATASPACE);
+            res.domain = m.group(RGX_GRP_DOMAIN);
+            res.domainVersion = m.group(RGX_GRP_DOMAIN_VERSION);
+            res.objectType = m.group(RGX_GRP_OBJECT_TYPE);
+            res.uuid = m.group(RGX_GRP_UUID) != null ? m.group(RGX_GRP_UUID) : m.group(RGX_GRP_UUID2);
+            res.version = m.group(RGX_GRP_VERSION);
+            res.collectionDomain = m.group(RGX_GRP_COLLECTION_DOMAIN);
+            res.collectionDomainVersion = m.group(RGX_GRP_COLLECTION_DOMAIN_VERSION);
+            res.collectionDomainType = m.group(RGX_GRP_COLLECTION_TYPE);
+            res.query = m.group(RGX_GRP_QUERY);
         }else{
             logger.info("\tNothing found " + uri +"");
         }

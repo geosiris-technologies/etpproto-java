@@ -29,12 +29,10 @@ import org.eclipse.jetty.websocket.api.StatusCode;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+
 public class ETPClientSession implements Runnable{
-	public static Logger logger = LogManager.getLogger(ETPClientSession.class);
+	public static final Logger logger = LogManager.getLogger(ETPClientSession.class);
 
 	public static final List<SupportedProtocol> SUPPORTED_PROTOCOLS = getSupportedProtocol();
 
@@ -61,7 +59,7 @@ public class ETPClientSession implements Runnable{
 
 	public void addPendingMessage(Message msg) {
 		if (encoding == MessageEncoding.BINARY) {
-			for(byte[] buff: msg.encodeMessage(etpClient.getEtpConnection().getClientInfo().maxWebSocketMessagePayloadSize, etpClient.getEtpConnection()))
+			for(byte[] buff: msg.encodeMessage(etpClient.getEtpConnection().getClientInfo().MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE, etpClient.getEtpConnection()))
 				addPendingMessage(buff);
 		}else{
 			logger.error("Not supported MessageEncoding");
@@ -201,36 +199,36 @@ public class ETPClientSession implements Runnable{
 
 	@SuppressWarnings("unused")
 	private static List<SupportedProtocol> getSupportedProtocol() {
-		List<SupportedProtocol> supportedProtocol = new ArrayList<SupportedProtocol>();
-		HashMap<CharSequence, DataValue> map = new HashMap<CharSequence, DataValue>();
+		List<SupportedProtocol> supportedProtocol = new ArrayList<>();
+		HashMap<CharSequence, DataValue> map = new HashMap<>();
 
 		SupportedProtocol spCore = new SupportedProtocol(
-				ETPinfo.getProtocolNumber("Core"),
+				Objects.requireNonNull(ETPinfo.getProtocolNumber("Core")),
 				ETPinfo.ETP_VERSION,
 				"server",
 				map);
 		SupportedProtocol spChannelStreaming = new SupportedProtocol(
-				ETPinfo.getProtocolNumber("ChannelStreaming"),
+				Objects.requireNonNull(ETPinfo.getProtocolNumber("ChannelStreaming")),
 				ETPinfo.ETP_VERSION,
 				"consumer",
 				map);
 		SupportedProtocol spDiscovery = new SupportedProtocol(
-				ETPinfo.getProtocolNumber("Discovery"),
+				Objects.requireNonNull(ETPinfo.getProtocolNumber("Discovery")),
 				ETPinfo.ETP_VERSION,
 				"store",
 				map);
 		SupportedProtocol spStore = new SupportedProtocol(
-				ETPinfo.getProtocolNumber("Store"),
+				Objects.requireNonNull(ETPinfo.getProtocolNumber("Store")),
 				ETPinfo.ETP_VERSION,
 				"store",
 				map);
 		SupportedProtocol spStoreNotification = new SupportedProtocol(
-				ETPinfo.getProtocolNumber("StoreNotification"),
+				Objects.requireNonNull(ETPinfo.getProtocolNumber("StoreNotification")),
 				ETPinfo.ETP_VERSION,
 				"store",
 				map);
 		SupportedProtocol spGrowingObjectNotification = new SupportedProtocol(
-				ETPinfo.getProtocolNumber("GrowingObjectNotification"),
+				Objects.requireNonNull(ETPinfo.getProtocolNumber("GrowingObjectNotification")),
 				ETPinfo.ETP_VERSION,
 				"store",
 				map);

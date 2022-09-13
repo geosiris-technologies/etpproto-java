@@ -27,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class SupportedTypesHandler_DefaultPrinter extends SupportedTypesHandler{
-	public static Logger logger = LogManager.getLogger(SupportedTypesHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(SupportedTypesHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_GetSupportedTypes(GetSupportedTypes msg, MessageHeader msgHeader, ClientInfo clientInfo) {

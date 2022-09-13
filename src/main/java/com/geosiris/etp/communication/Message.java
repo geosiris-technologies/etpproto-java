@@ -37,7 +37,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
 public class Message {
-	public static Logger logger = LogManager.getLogger(Message.class);
+	public static final Logger logger = LogManager.getLogger(Message.class);
 
 	private MessageHeader header;
 	private SpecificRecordBase body;
@@ -57,6 +57,7 @@ public class Message {
 			binaryEncoder.flush();
 			bf.flush();
 		} catch (IOException e) {
+			logger.debug(e.getMessage(), e);
 		}
 //		logger.info("<> " + bf.toByteArray().length + " == '" + bf.toString()+ "' " + mh);
 		return bf.toByteArray();
@@ -74,7 +75,7 @@ public class Message {
 			recordWriter.write(mh, jsonEncoder);
 			jsonEncoder.flush();
 			bf.flush();
-		} catch (IOException igonre) {
+		} catch (IOException ignore) {
 		}
 		return bf.toString();
 	}
@@ -116,6 +117,7 @@ public class Message {
 		}
 		Object doCollection = null;
 		try {
+			assert referencer != null;
 			doCollection = ETPUtils.getAttributeValue(referencer.body, "dataObjects");
 		} catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
 			logger.error(e.getMessage());
@@ -173,7 +175,7 @@ public class Message {
 			// HEADER
 //			this.header = MessageHeader.fromByteBuffer(msg);
 			this.header = new MessageHeader();
-			SpecificDatumReader<MessageHeader> headerReader = new SpecificDatumReader<MessageHeader>(
+			SpecificDatumReader<MessageHeader> headerReader = new SpecificDatumReader<>(
 					this.header.getSchema(), this.header.getSchema());
 			headerReader.read(this.header, dec);
 
@@ -238,8 +240,8 @@ public class Message {
 		this.header.setMessageFlags(msgFlags);
 //		logger.info("##// Msg flag : " + this.header.getMessageFlags());
 		//logger.info("Creating etp message for class " + body.getClass() + " ---> " + ETPinfo.getProp(body.getClass(), "messageType"));
-		this.header.setProtocol(Integer.parseInt(ETPinfo.getProp(body.getClass(), "protocol")));
-		this.header.setMessageType(Integer.parseInt(ETPinfo.getProp(body.getClass(), "messageType")));
+		this.header.setProtocol(Integer.parseInt(Objects.requireNonNull(ETPinfo.getProp(body.getClass(), "protocol"))));
+		this.header.setMessageType(Integer.parseInt(Objects.requireNonNull(ETPinfo.getProp(body.getClass(), "messageType"))));
 		this.header.setCorrelationId(correlationId);
 //		int flag = 1 << 2;
 		this.header.setMessageId(msgId);
@@ -458,7 +460,7 @@ public class Message {
 			int max_bytes_per_msg,
 			ETPConnection connection
 	) throws ETPError.InternalError {
-		List<byte[]> result = new ArrayList<>();
+		List<byte[]> result;
 
 		int secure_size = 50;  // TODO : ameliorer pour que le chunk fasse vraiment la taille max d'un message (il faudrait connaitre la taille de ce qui n'est pas binaire dans le chunk message)
 		int size_of_chunks = max_bytes_per_msg - secure_size; // substract 50 for header part (header takes 5?) and non binary part of the chunk message
@@ -479,8 +481,6 @@ public class Message {
 		// else : // rien a changer le correlation_id est deja sur le meme que self car c'est celui de la requete recu
 
 		if (data_objs != null){  // si on a une list/Map de dataObjects
-			int nb_chunks = (int) Math.ceil(encoded_msg_size / size_of_chunks);
-			// print("Size of chunks : ", size_of_chunks, " msgS ", encoded_msg_size)
 			// get the chunks class
 			Class<?> chunk_class = ProtocolsUtility.getEtpClassFromProtocolIdAndName(
 					chunkable_msg.header.getProtocol(),
@@ -495,8 +495,8 @@ public class Message {
 				// blob_id is assign to one entire DataObject and is refered in all chunck of this dataObject
 
 				if (data_objs instanceof Map){
-					Map dataObjs_map = (Map) data_objs;
-					for(Object dataObj_o : dataObjs_map.values()) {
+					Map<?, ?> dataObjsMap = (Map<?,?>) data_objs;
+					for(Object dataObj_o : dataObjsMap.values()) {
 						DataObject dataObj = (DataObject) dataObj_o;
 						ByteBuffer data = dataObj.getData();
 						Uuid blob_id = new Uuid(ETPUtils.asBytes(UUID.randomUUID()));
@@ -531,7 +531,7 @@ public class Message {
 						}
 					}
 				}else if (data_objs instanceof List){
-					List dataObjs_list = (List) data_objs;
+					List<?> dataObjs_list = (List<?>) data_objs;
 					for(Object dataObj_o : dataObjs_list) {
 						DataObject dataObj = (DataObject) dataObj_o;
 						ByteBuffer data = dataObj.getData();
@@ -568,11 +568,11 @@ public class Message {
 					}
 				}
 
-//            chunkable_msg.data_objects = data_objs  // useless ?
+				// chunkable_msg.data_objects = data_objs  // useless ?
 				// send the message
 				chunkable_msg.setFinalMsg(false);
 				chunkable_msg.addHeaderFlag(MessageFlags.MULTIPART);
-				result.addAll(chunkable_msg.encodeMessage(max_bytes_per_msg, connection));
+				result = new ArrayList<>(chunkable_msg.encodeMessage(max_bytes_per_msg, connection));
 
 				// send chunks
 				for(SpecificRecordBase chunk : lst_chunks.subList(0, lst_chunks.size()-1))

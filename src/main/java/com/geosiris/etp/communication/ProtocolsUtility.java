@@ -27,26 +27,27 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 public class ProtocolsUtility {
-	public static Logger logger = LogManager.getLogger(ProtocolsUtility.class);
+	public static final Logger logger = LogManager.getLogger(ProtocolsUtility.class);
 	public static final Map<Integer, Map<Integer, Schema>> etpProtocolTypes = initProtocols();
 
 	public static <T extends SpecificRecordBase> void decode(T obj, Decoder dec) throws IOException {
-		SpecificDatumReader<T> reader = new SpecificDatumReader<T>(obj.getSchema(), obj.getSchema());
+		SpecificDatumReader<T> reader = new SpecificDatumReader<>(obj.getSchema(), obj.getSchema());
 		reader.read(obj, dec);
 	}
 
-	public static Object handleMessage(MessageHeader mh, Decoder dec) throws Exception{
+	public static Object handleMessage(MessageHeader mh, Decoder dec) throws NoSuchMethodException, IOException, InvocationTargetException, InstantiationException, IllegalAccessException {
 		Class<?> etpObjClass = getEtpClassFromIds(mh.getProtocol(), mh.getMessageType());
 		// logger.info("Trying to find class for protocol '" + mh.getProtocol() +"' messageType '" + mh.getMessageType() +"' -> " + etpObjClass);
-		Object etpObject = null;
-		try {
-			etpObject = etpObjClass.newInstance();
-			decode((SpecificRecordBase)etpObject, dec);
-		} catch (InstantiationException | IllegalAccessException | IOException e) {etpObject = null; throw e; }//e.printStackTrace(); }
-		logger.info("Recived objet [" + etpObject.getClass() + "]\n" + etpObject);
+		Object etpObject;
+		assert etpObjClass != null;
+		etpObject = etpObjClass.getConstructor().newInstance();
+		decode((SpecificRecordBase)etpObject, dec);
+		logger.info("Received objet [" + etpObject.getClass() + "]\n" + etpObject);
+
 		return etpObject;
 	}
 
@@ -56,11 +57,13 @@ public class ProtocolsUtility {
 		SpecificRecordBase etpObject = null;
 		try {
 			logger.info("Try to read json from : " + msg);
-			etpObject = (SpecificRecordBase) etpObjClass.newInstance();
+			assert etpObjClass != null;
+			etpObject = (SpecificRecordBase) etpObjClass.getConstructor().newInstance();
 			JsonDecoder jsonDec = DecoderFactory.get().jsonDecoder(etpObject.getSchema(), msg);
-			decode((SpecificRecordBase)etpObject, jsonDec);
-		} catch (InstantiationException | IllegalAccessException | IOException e) {  logger.error(e.getMessage());  logger.debug(e.getMessage(), e); }
-		logger.info("Recived objet [" + etpObject.getClass() + "]\n" + etpObject);
+			decode(etpObject, jsonDec);
+			logger.info("Recived objet [" + etpObject.getClass() + "]\n" + etpObject);
+		} catch (InstantiationException | IllegalAccessException | IOException | NoSuchMethodException |
+				 InvocationTargetException e) {  logger.error(e.getMessage());  logger.debug(e.getMessage(), e); }
 		return etpObject;
 	}
 

@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class CoreHandler_DefaultPrinter extends CoreHandler{
-	public static Logger logger = LogManager.getLogger(CoreHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(CoreHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_Acknowledge(Acknowledge msg, MessageHeader msgHeader, ClientInfo clientInfo) {
