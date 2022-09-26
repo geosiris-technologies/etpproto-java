@@ -28,7 +28,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 public abstract class ProtocolHandler {
-	public static Logger logger = LogManager.getLogger(ProtocolHandler.class);
+	public static final Logger logger = LogManager.getLogger(ProtocolHandler.class);
 
     public <T extends SpecificRecordBase> Collection<Message> handleMessage(
             T etpObject,

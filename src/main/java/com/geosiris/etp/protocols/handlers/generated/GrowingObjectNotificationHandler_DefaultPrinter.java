@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class GrowingObjectNotificationHandler_DefaultPrinter extends GrowingObjectNotificationHandler{
-	public static Logger logger = LogManager.getLogger(GrowingObjectNotificationHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(GrowingObjectNotificationHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_PartSubscriptionEnded(PartSubscriptionEnded msg, MessageHeader msgHeader, ClientInfo clientInfo) {

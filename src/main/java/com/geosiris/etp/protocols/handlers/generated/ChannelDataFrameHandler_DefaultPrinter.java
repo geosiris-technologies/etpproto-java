@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class ChannelDataFrameHandler_DefaultPrinter extends ChannelDataFrameHandler{
-	public static Logger logger = LogManager.getLogger(ChannelDataFrameHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(ChannelDataFrameHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_CancelGetFrame(CancelGetFrame msg, MessageHeader msgHeader, ClientInfo clientInfo) {

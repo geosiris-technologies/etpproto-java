@@ -18,7 +18,7 @@ package com.geosiris.etp.communication;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 public class MessageFlags {
-	public static Logger logger = LogManager.getLogger(MessageFlags.class);
+	public static final Logger logger = LogManager.getLogger(MessageFlags.class);
     /** enum.Flag class would be a better choice but doesn't work with our operations **/
     /** None **/
     public static final int NONE = 0x0;

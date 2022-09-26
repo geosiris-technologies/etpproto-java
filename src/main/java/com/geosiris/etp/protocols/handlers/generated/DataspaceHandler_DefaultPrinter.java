@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class DataspaceHandler_DefaultPrinter extends DataspaceHandler{
-	public static Logger logger = LogManager.getLogger(DataspaceHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(DataspaceHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_DeleteDataspaces(DeleteDataspaces msg, MessageHeader msgHeader, ClientInfo clientInfo) {

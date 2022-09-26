@@ -28,19 +28,19 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 public class ETPConnection {
-    public static Logger logger = LogManager.getLogger(ETPConnection.class);
-    public final String SUB_PROTOCOL = "etp12.energistics.org";
+    public static final Logger logger = LogManager.getLogger(ETPConnection.class);
+    public static final String SUB_PROTOCOL = "etp12.energistics.org";
 
-    private ServerCapabilities serverCapabilities;
+    private final ServerCapabilities serverCapabilities;
     private boolean isConnected;
     private long messageId;
 
-    private Map<Long, List<Message>> chunkMessageCache;
+    private final Map<Long, List<Message>> chunkMessageCache;
 
     public ClientInfo clientInfo;
-    private ConnectionType connectionType;
+    private final ConnectionType connectionType;
 
-    private Map<CommunicationProtocol, ProtocolHandler> protocolHandlers;
+    private final Map<CommunicationProtocol, ProtocolHandler> protocolHandlers;
 
     public ETPConnection(ConnectionType connectionType, ServerCapabilities serverCapabilities, ClientInfo clientInfo, Map<CommunicationProtocol, ProtocolHandler> protocolHandlers){
         this.connectionType = connectionType;
@@ -151,7 +151,7 @@ public class ETPConnection {
         Collection<byte[]> result = new ArrayList<>();
 
         for (Message msg : msgs) {
-            result.addAll(msg.encodeMessage(this.clientInfo.maxWebSocketMessagePayloadSize, this));
+            result.addAll(msg.encodeMessage(this.clientInfo.MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE, this));
         }
         return result;
     }
@@ -166,7 +166,7 @@ public class ETPConnection {
 
         for (Message msg : this._handleMessage(etp_input_msg)) {
             if (msg != null)
-                return msg.encodeMessage(this.clientInfo.maxWebSocketMessagePayloadSize, this);
+                return msg.encodeMessage(this.clientInfo.MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE, this);
         }
         return new ArrayList<>();
     }
@@ -180,7 +180,7 @@ public class ETPConnection {
 
         for (Message msg : this._handleMessage(etp_input_msg)) {
             if (msg != null)
-                return msg.encodeMessage(this.clientInfo.maxWebSocketMessagePayloadSize, this);
+                return msg.encodeMessage(this.clientInfo.MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE, this);
         }
         return new ArrayList<>();
     }

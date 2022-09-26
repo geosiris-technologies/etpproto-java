@@ -27,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class DiscoveryQueryHandler_DefaultPrinter extends DiscoveryQueryHandler{
-	public static Logger logger = LogManager.getLogger(DiscoveryQueryHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(DiscoveryQueryHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_FindResources(FindResources msg, MessageHeader msgHeader, ClientInfo clientInfo) {

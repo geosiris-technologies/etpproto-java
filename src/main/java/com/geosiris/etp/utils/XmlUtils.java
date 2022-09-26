@@ -29,10 +29,11 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 public class XmlUtils {
-	public static Logger logger = LogManager.getLogger(XmlUtils.class);
+	public static final Logger logger = LogManager.getLogger(XmlUtils.class);
 
 	private static DocumentBuilder db;
 
@@ -90,7 +91,7 @@ public class XmlUtils {
 	}
 
 	public static String getEnergymlNamespaceForETP(Document fileContent){
-		return getEnergymlTypeInXml(fileContent) + getSchemaVersion(fileContent).replaceAll("[_\\.]+", "").substring(0,2);
+		return getEnergymlTypeInXml(fileContent) + Objects.requireNonNull(getSchemaVersion(fileContent)).replaceAll("[_\\.]+", "").substring(0,2);
 	}
 
 	public static String getUriInXml(Document fileContent, String dataspace){

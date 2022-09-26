@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class TransactionHandler_DefaultPrinter extends TransactionHandler{
-	public static Logger logger = LogManager.getLogger(TransactionHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(TransactionHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_CommitTransaction(CommitTransaction msg, MessageHeader msgHeader, ClientInfo clientInfo) {

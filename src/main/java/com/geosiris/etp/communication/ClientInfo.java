@@ -18,22 +18,22 @@ package com.geosiris.etp.communication;
 
 import org.eclipse.jetty.http.HttpURI;
 public class ClientInfo {
-    public static long instancesCount;
+    protected static long instancesCount;
 
-    private final long _id;
+    private final long identifier;
     private final HttpURI url;
-    public final int maxWebSocketFramePayloadSize;
-    public final int maxWebSocketMessagePayloadSize;
+    public final int MAX_WEBSOCKET_FRAME_PAYLOAD_SIZE;
+    public final int MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE;
 
     public ClientInfo(
             HttpURI url,
             int maxWebSocketFramePayloadSize,
             int maxWebSocketMessagePayloadSize
     ) {
-        this._id = ClientInfo.instancesCount ++;
+        this.identifier = ClientInfo.instancesCount ++;
         this.url = url;
-        this.maxWebSocketFramePayloadSize = maxWebSocketFramePayloadSize;
-        this.maxWebSocketMessagePayloadSize = maxWebSocketMessagePayloadSize;
+        this.MAX_WEBSOCKET_FRAME_PAYLOAD_SIZE = maxWebSocketFramePayloadSize;
+        this.MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE = maxWebSocketMessagePayloadSize;
     }
     public ClientInfo(HttpURI url){
         this(url, 4194304, 16777216);
@@ -41,10 +41,10 @@ public class ClientInfo {
 
     @Override
     public String toString() {
-        return "ClientInfo[" + this._id + "] " + this.url;
+        return "ClientInfo[" + this.identifier + "] " + this.url;
     }
 
     public String printPrefix(){
-        return "[" + this._id + "] " + this.url;
+        return "[" + this.identifier + "] " + this.url;
     }
 }

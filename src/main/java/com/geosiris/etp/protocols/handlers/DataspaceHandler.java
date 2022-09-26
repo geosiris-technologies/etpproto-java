@@ -28,7 +28,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class DataspaceHandler extends ProtocolHandler{
-	public static Logger logger = LogManager.getLogger(DataspaceHandler.class);
+	public static final Logger logger = LogManager.getLogger(DataspaceHandler.class);
 
     public static final CommunicationProtocol protocol = CommunicationProtocol.DATASPACE;
 

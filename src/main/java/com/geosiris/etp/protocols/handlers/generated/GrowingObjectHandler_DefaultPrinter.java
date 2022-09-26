@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class GrowingObjectHandler_DefaultPrinter extends GrowingObjectHandler{
-	public static Logger logger = LogManager.getLogger(GrowingObjectHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(GrowingObjectHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_DeleteParts(DeleteParts msg, MessageHeader msgHeader, ClientInfo clientInfo) {

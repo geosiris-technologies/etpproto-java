@@ -38,13 +38,14 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.*;
 public class ETPUtils {
-	public static Logger logger = LogManager.getLogger(ETPUtils.class);
+	public static final Logger logger = LogManager.getLogger(ETPUtils.class);
+	private final static int integerBitCount = Integer.toBinaryString(Integer.MAX_VALUE).length();
 
 	public static <T extends SpecificRecordBase> byte[] getWrittenBytes(T object) throws IOException{
 		ByteArrayOutputStream bf = new ByteArrayOutputStream();
 		BinaryEncoder binaryEncoder = EncoderFactory.get().binaryEncoder(bf, null);
 
-		SpecificDatumWriter<T> headerWriter = new SpecificDatumWriter<T>(object.getSchema());
+		SpecificDatumWriter<T> headerWriter = new SpecificDatumWriter<>(object.getSchema());
 		headerWriter.write(object, binaryEncoder);
 		binaryEncoder.flush();
 
@@ -107,7 +108,7 @@ public class ETPUtils {
 		logger.info("Sending message Protocol[" + obj.getProtocol() + "]Type[" + obj.getMessageType() + "]");
 		JsonEncoder jsonEncoder = EncoderFactory.get().jsonEncoder(
 				obj.getSchema(), out);
-		SpecificDatumWriter<T> headerWriter = new SpecificDatumWriter<T>(
+		SpecificDatumWriter<T> headerWriter = new SpecificDatumWriter<>(
 				obj.getSchema());
 		headerWriter.write(obj, jsonEncoder);
 		jsonEncoder.flush();
@@ -119,7 +120,7 @@ public class ETPUtils {
 		// the decodification part
 		out = new ByteArrayOutputStream();
 		jsonEncoder = EncoderFactory.get().jsonEncoder(srb.getSchema(), out);
-		SpecificDatumWriter<M> bodyWriter = new SpecificDatumWriter<M>(
+		SpecificDatumWriter<M> bodyWriter = new SpecificDatumWriter<>(
 				srb.getSchema());
 		bodyWriter.write(srb, jsonEncoder);
 		jsonEncoder.flush();
@@ -145,8 +146,7 @@ public class ETPUtils {
 	}
 
 	private static Message readMessages(MessageHeader mh, Decoder dec, byte[] byteMsg) {
-//		private static Pair<Long, Object> readMessages(MessageHeader mh, Decoder dec, byte[] byteMsg) {
-		SpecificDatumReader<MessageHeader> headerReader = new SpecificDatumReader<MessageHeader>(
+		SpecificDatumReader<MessageHeader> headerReader = new SpecificDatumReader<>(
 				mh.getSchema(), mh.getSchema());
 
 		try {
@@ -159,7 +159,7 @@ public class ETPUtils {
 //		logger.info("Header " + mh.getMessageType() + " " + mh.getCorrelationId() + " -id-> " + mh.getMessageId());
 		//      if (supportedProtocol.containsKey(mh.getProtocol())) {
 
-		/**
+		/*
 		 * When the message type and the protocol are 0, it means the message was built
 		 * using the default constructor, and thus contains no information
 		 * */
@@ -183,7 +183,7 @@ public class ETPUtils {
 				}
 			}
 //			logger.info("DECODED : " + decoded_msg);
-			return new Message((MessageEncoding) null, mh, (SpecificRecordBase) decoded_msg);
+			return new Message(null, mh, (SpecificRecordBase) decoded_msg);
 		}
 	}
 
@@ -205,7 +205,7 @@ public class ETPUtils {
 		try {
 			JsonDecoder dec = DecoderFactory.get().jsonDecoder(mh.getSchema(), msg);
 			if (dec != null) {
-				SpecificDatumReader<MessageHeader> headerReader = new SpecificDatumReader<MessageHeader>(
+				SpecificDatumReader<MessageHeader> headerReader = new SpecificDatumReader<>(
 						mh.getSchema(), mh.getSchema());
 
 				try {
@@ -239,7 +239,7 @@ public class ETPUtils {
 	}
 
 
-	private static int integerBitCount = Integer.toBinaryString(Integer.MAX_VALUE).length();
+
 
 	public static Byte[] toBitArrayLeftToRight(int v) {
 		String bitRep = Integer.toBinaryString(v);
@@ -260,11 +260,11 @@ public class ETPUtils {
 	}
 
 	public static String byteArrayToString(Byte[] ba) {
-		String res = "";
-		for(int i=0; i<ba.length; i++) {
-			res += ba[i];
+		StringBuilder res = new StringBuilder();
+		for (Byte aByte : ba) {
+			res.append(aByte);
 		}
-		return res;
+		return res.toString();
 	}
 
 	public static <A, T> Map<A, T> concat(Map<A, T> a, Map<A,T> b){
@@ -402,7 +402,7 @@ public class ETPUtils {
 
 		logger.info(byteArrayToString(toBitArrayLeftToRight(19)));
 
-		logger.info( (2 & MessageFlags.FINALPART) != 0);
+		logger.info(2 & MessageFlags.FINALPART);
 
 		int[] firstArray = {23,45,12,78,4,90,1};        //source array
 		int[] secondArray = {77,11,45,88,32,56,3};  //destination array
@@ -423,7 +423,7 @@ public class ETPUtils {
 		partialList.add(f0);
 		partialList.add(f1);
 		partialList.add(f2);
-		int fullSize = partialList.stream().map(ll -> ll.length).reduce(0, (a, b) -> a + b);
+		int fullSize = partialList.stream().map(ll -> ll.length).reduce(0, Integer::sum);
 		int[] entireMsg = new int[fullSize];
 		logger.info(fullSize);
 		int accumulator = 0;
@@ -431,8 +431,8 @@ public class ETPUtils {
 			System.arraycopy(partialMsg, 0, entireMsg, accumulator, partialMsg.length);
 			accumulator += partialMsg.length;
 		}
-		for(int i=0;i<entireMsg.length;i++) {
-			System.out.print(entireMsg[i]+",");
+		for (int j : entireMsg) {
+			System.out.print(j + ",");
 		}
 
 	}

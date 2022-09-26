@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.Collection;
 public class ChannelDataLoadHandler_DefaultPrinter extends ChannelDataLoadHandler{
-	public static Logger logger = LogManager.getLogger(ChannelDataLoadHandler_DefaultPrinter.class);
+	public static final Logger logger = LogManager.getLogger(ChannelDataLoadHandler_DefaultPrinter.class);
 
     @Override
     public Collection<Message> on_ChannelData(ChannelData msg, MessageHeader msgHeader, ClientInfo clientInfo) {
