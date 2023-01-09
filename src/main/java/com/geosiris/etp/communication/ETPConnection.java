@@ -40,6 +40,7 @@ public class ETPConnection {
     public ClientInfo clientInfo;
     private final ConnectionType connectionType;
 
+
     private final Map<CommunicationProtocol, ProtocolHandler> protocolHandlers;
 
     public ETPConnection(ConnectionType connectionType, ServerCapabilities serverCapabilities, ClientInfo clientInfo, Map<CommunicationProtocol, ProtocolHandler> protocolHandlers){
@@ -204,4 +205,9 @@ public class ETPConnection {
     public ConnectionType getConnectionType() {
         return connectionType;
     }
+
+    public Map<CommunicationProtocol, ProtocolHandler> getProtocolHandlers() {
+        return protocolHandlers;
+    }
+
 }
