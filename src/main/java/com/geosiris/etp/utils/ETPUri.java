@@ -120,7 +120,7 @@ public class ETPUri {
             res.collectionDomainType = m.group(RGX_GRP_COLLECTION_TYPE);
             res.query = m.group(RGX_GRP_QUERY);
         }else{
-            logger.info("\tNothing found " + uri +"");
+            logger.error("\tNothing found " + uri);
         }
 
         return res;

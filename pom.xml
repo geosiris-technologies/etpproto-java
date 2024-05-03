@@ -4,7 +4,7 @@
 	<groupId>com.geosiris</groupId>
 	<artifactId>etpproto-java</artifactId>
 	<name>${project.groupId}:${project.artifactId}</name>
-	<version>1.0.1</version>
+	<version>1.0.2</version>
 	<organization>
 		<name>Geosiris</name>
 		<url>http://www.geosiris.com</url>
@@ -40,9 +40,11 @@
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
 		<java.version>11</java.version>
-		<jetty.version>9.4.50.v20221201</jetty.version>
+		<jetty.version>9.4.51.v20230217</jetty.version>
 		<sonar.organization>geosiris-technologies</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
+		<slf4j.version>2.0.13</slf4j.version>
+		<log4j.version>2.20.0</log4j.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -59,12 +61,22 @@
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-api</artifactId>
-			<version>2.19.0</version>
+			<version>${log4j.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
-			<version>2.19.0</version>
+			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>${slf4j.version}</version>
 		</dependency>
 	</dependencies>
 	<distributionManagement>
@@ -143,7 +155,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-javadoc-plugin</artifactId>
-						<version>3.4.1</version>
+						<version>3.6.3</version>
 						<executions>
 							<execution>
 								<id>attach-javadocs</id>
@@ -167,7 +179,7 @@
 					<plugin>
 						<groupId>org.codehaus.mojo</groupId>
 						<artifactId>build-helper-maven-plugin</artifactId>
-						<version>3.3.0</version>
+						<version>3.4.0</version>
 						<executions>
 							<execution>
 								<id>add-source</id>

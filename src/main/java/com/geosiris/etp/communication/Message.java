@@ -59,7 +59,7 @@ public class Message {
 		} catch (IOException e) {
 			logger.debug(e.getMessage(), e);
 		}
-//		logger.info("<> " + bf.toByteArray().length + " == '" + bf.toString()+ "' " + mh);
+//		logger.debug("<> " + bf.toByteArray().length + " == '" + bf.toString()+ "' " + mh);
 		return bf.toByteArray();
 	}
 
@@ -181,6 +181,7 @@ public class Message {
 
 			// BODY
 			Class<? extends SpecificRecordBase> etpObjClass = (Class<? extends SpecificRecordBase>) ProtocolsUtility.getEtpClassFromIds(this.header.getProtocol(), this.header.getMessageType());
+			logger.debug("OBJ CLASS : " + etpObjClass);
 			assert etpObjClass != null;
 			this.body = etpObjClass.getConstructor().newInstance();
 			ProtocolsUtility.decode(this.body, dec);
@@ -238,8 +239,8 @@ public class Message {
 
 		this.header = new MessageHeader();
 		this.header.setMessageFlags(msgFlags);
-//		logger.info("##// Msg flag : " + this.header.getMessageFlags());
-		//logger.info("Creating etp message for class " + body.getClass() + " ---> " + ETPinfo.getProp(body.getClass(), "messageType"));
+//		logger.debug("##// Msg flag : " + this.header.getMessageFlags());
+		//logger.debug("Creating etp message for class " + body.getClass() + " ---> " + ETPinfo.getProp(body.getClass(), "messageType"));
 		this.header.setProtocol(Integer.parseInt(Objects.requireNonNull(ETPinfo.getProp(body.getClass(), "protocol"))));
 		this.header.setMessageType(Integer.parseInt(Objects.requireNonNull(ETPinfo.getProp(body.getClass(), "messageType"))));
 		this.header.setCorrelationId(correlationId);
@@ -267,6 +268,7 @@ public class Message {
 		int bodySize = out_body.length;
 
 		if (max_bytes_per_msg > 0 && headerSize + bodySize > max_bytes_per_msg){
+			// logger.debug("Size exceed max, try to split");
 			// Message exceed the max_bytes_per_msg
 			if (this.isPluralMsg()) {
 				Message msg1 = new Message(this);
@@ -317,6 +319,7 @@ public class Message {
 					try {
 						msgResult.addAll(_encodeMessageChunk(this, bodySize, max_bytes_per_msg, connection));
 					} catch (ETPError.InternalError e) {
+						e.printStackTrace();
 						logger.error(e.getMessage());
 						logger.debug(e.getMessage(), e);
 						Message msg_err = e.to_etp_message(connection.consumeMessageId(),
@@ -326,6 +329,7 @@ public class Message {
 					}
 				}
 			}else{ // erreur
+				logger.error("not a plural Message, can not be sent " + this.header);
 				Message msg_err = new ETPError.MaxSizeExceededError().to_etp_message(connection.consumeMessageId(),
 						header.getCorrelationId() != 0 ? this.header.getCorrelationId() : 0);
 				msg_err.setFinalMsg(true);
@@ -333,7 +337,7 @@ public class Message {
 			}
 		}else{  // Original Message doesn't exceed max_bytes_per_msg
 			// this.set_final_msg()
-//			logger.info("FIN : " + this.header);
+//			logger.debug("FIN : " + this.header);
 			msgResult.add(ETPUtils.concatWithArrayCopy(out_h0, out_body));
 		}
 		return msgResult;
@@ -464,9 +468,16 @@ public class Message {
 
 		int secure_size = 50;  // TODO : ameliorer pour que le chunk fasse vraiment la taille max d'un message (il faudrait connaitre la taille de ce qui n'est pas binaire dans le chunk message)
 		int size_of_chunks = max_bytes_per_msg - secure_size; // substract 50 for header part (header takes 5?) and non binary part of the chunk message
+
+		List<String> do_names = Arrays.asList("dataObjects", "dataArrays");
+
 		Object data_objs = null;
 		try {
-			data_objs = ETPUtils.getAttributeValue(chunkable_msg.body, "dataObjects");
+			for(String do_name: do_names) {
+				data_objs = ETPUtils.getAttributeValue(chunkable_msg.body, do_name);
+				if(data_objs != null)
+					break;
+			}
 		} catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
 			logger.error(e.getMessage());
 			logger.debug(e.getMessage(), e);
@@ -586,7 +597,8 @@ public class Message {
 				throw new InternalError ("@Message : No chunck class found for protocol " + chunkable_msg.header.getProtocol());
 			}
 		}else {
-			throw new ETPError.InternalError("@Message : No data_object found " + chunkable_msg.header.getProtocol());
+			throw new ETPError.InternalError("@Message : No data_object found " + chunkable_msg.header.getProtocol() + " for msg "
+					+ chunkable_msg.body.getClass());
 		}
 		// raise une erreur ?
 		return result;

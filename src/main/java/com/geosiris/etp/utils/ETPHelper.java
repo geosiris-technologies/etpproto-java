@@ -96,9 +96,9 @@ public class ETPHelper {
 
 			PutDataObjects pdo = ETPDefaultProtocolBuilder.buildPutDataObjects(ressource_list, false);
 			long pdi_id = etpClient.send(pdo);
-//			logger.info(pdi_id + ") Waiting for Put data answer");
+//			logger.debug(pdi_id + ") Waiting for Put data answer");
 			return etpClient.getEtpClientSession().waitForResponse(pdi_id, timeoutMS);
-//			logger.info(pdi_id + ") Answer : " + dataResp);
+//			logger.debug(pdi_id + ") Answer : " + dataResp);
 		}
 		return null;
 	}
@@ -132,9 +132,9 @@ public class ETPHelper {
 		GetDataObjects getDataO = ETPDefaultProtocolBuilder.buildGetDataObjects(mapObj, format);
 		long getData_id = etpClient.send(getDataO);
 
-//		logger.info(getData_id+") Waiting for GetDataObjects answer\n" + getDataO);
+//		logger.debug(getData_id+") Waiting for GetDataObjects answer\n" + getDataO);
 		return etpClient.getEtpClientSession().waitForResponse(getData_id, timeoutMS);
-//		logger.info(getData_id+") Answer : " + dataResp);
+//		logger.debug(getData_id+") Answer : " + dataResp);
 	}
 
 	/**
@@ -208,8 +208,8 @@ public class ETPHelper {
 				.setIncludeEdges(false)
 				.build();
 		long getRess_id = etpClient.send(getRess);
-//		logger.info(getRess_id+") Waiting for GetResources answer");
-		//		logger.info(getRess_id+") Answer : " + ressResp_l);
+//		logger.debug(getRess_id+") Waiting for GetResources answer");
+		//		logger.debug(getRess_id+") Answer : " + ressResp_l);
 
 		return etpClient.getEtpClientSession().waitForResponse(getRess_id, timeoutMS);
 	}
@@ -228,10 +228,10 @@ public class ETPHelper {
 		for(Message msg : msgs) {
 			if (msg.getBody() instanceof GetResourcesResponse) {
 				GetResourcesResponse objResp = (GetResourcesResponse) msg.getBody();
-//				logger.info("Found objects uri : ");
-//				logger.info("Nb ressources found : " + objResp.getResources().size());
+//				logger.debug("Found objects uri : ");
+//				logger.debug("Nb ressources found : " + objResp.getResources().size());
 				for (Resource res : objResp.getResources()) {
-//						logger.info(res.getUri());
+//						logger.debug(res.getUri());
 					result.add("" + res.getUri());
 				}
 			}
@@ -271,7 +271,7 @@ public class ETPHelper {
 		try {
 			for (Message meta_i : meta_resp) {
 				GetDataArrayMetadataResponse meta_response = (GetDataArrayMetadataResponse) meta_i.getBody();
-				logger.info("META>" + meta_response);
+				logger.debug("META>" + meta_response);
 
 				DataArrayMetadata dam = meta_response.getArrayMetadata().values().iterator().next();
 				List<Long> dimensions = dam.getDimensions();
@@ -282,7 +282,7 @@ public class ETPHelper {
 
 
 				List<Long> etpMsg_Ids = new ArrayList<>();
-				logger.info("nbElt " + nbElt + " SIZE is =>" + arrayTotalSize + " bytes == " + dimensions.stream().map(x -> x + "").reduce("", (a,b) -> a + " " + b));
+				logger.debug("nbElt " + nbElt + " SIZE is =>" + arrayTotalSize + " bytes == " + dimensions.stream().map(x -> x + "").reduce("", (a,b) -> a + " " + b));
 
 				long step = Math.min(dimensions.get(0) * nbBitPerElt / 8, // Size of the array for one element (only for the first dimension)
 						ETPClient.MAX_PAYLOAD_SIZE * 8 / nbBitPerElt ); // Max<nb of element possible to send
@@ -298,7 +298,7 @@ public class ETPHelper {
 //							.setStarts(Arrays.asList(new Long[]{subArrStart}))
 //							.setCounts(Arrays.asList(new Long[]{Math.min(dimensions.get(0)-subArrStart, step)}))
 //							.build());
-//					logger.info("\t Start " + mapSubArrType.get("0").getStarts() + " \t Counts => "+ mapSubArrType.get("0").getCounts());
+//					logger.debug("\t Start " + mapSubArrType.get("0").getStarts() + " \t Counts => "+ mapSubArrType.get("0").getCounts());
 //
 //					GetDataSubarrays gsa = GetDataSubarrays.newBuilder()
 //							.setDataSubarrays(mapSubArrType)
@@ -346,7 +346,7 @@ public class ETPHelper {
 				.setDataSubarrays(mapSubArrType)
 				.build();
 		long msgId = etpClient.send(gdsa);
-		logger.info(msgId + ") GetDataSubArray : on" + pathInHDF5
+		logger.debug(msgId + ") GetDataSubArray : on" + pathInHDF5
 				+ "start [ " + Arrays.stream(start).map(a -> a + " ").reduce("", (a, b) -> a+b) + "]"
 				+ " count [ " + Arrays.stream(count).map(a -> a + " ").reduce("", (a,b) -> a+b) + "]");
 
@@ -355,30 +355,30 @@ public class ETPHelper {
 
 	public static long getBitSize(AnyLogicalArrayType type){
 		switch (type){
-    		case arrayOfInt8:
-    		case arrayOfUInt8:
+			case arrayOfInt8:
+			case arrayOfUInt8:
 				return 8L;
-    		case arrayOfInt16LE:
-    		case arrayOfUInt16LE:
-    		case arrayOfInt16BE:
-    		case arrayOfUInt16BE:
-    		case arrayOfString:
+			case arrayOfInt16LE:
+			case arrayOfUInt16LE:
+			case arrayOfInt16BE:
+			case arrayOfUInt16BE:
+			case arrayOfString:
 				return 16L;
-    		case arrayOfUInt32BE:
-    		case arrayOfInt32LE:
-    		case arrayOfUInt32LE:
-    		case arrayOfFloat32LE:
-    		case arrayOfInt32BE:
-    		case arrayOfFloat32BE:
+			case arrayOfUInt32BE:
+			case arrayOfInt32LE:
+			case arrayOfUInt32LE:
+			case arrayOfFloat32LE:
+			case arrayOfInt32BE:
+			case arrayOfFloat32BE:
 				return 32L;
-    		case arrayOfUInt64LE:
-    		case arrayOfInt64LE:
-    		case arrayOfDouble64LE:
-    		case arrayOfInt64BE:
-    		case arrayOfUInt64BE:
-    		case arrayOfDouble64BE:
+			case arrayOfUInt64LE:
+			case arrayOfInt64LE:
+			case arrayOfDouble64LE:
+			case arrayOfInt64BE:
+			case arrayOfUInt64BE:
+			case arrayOfDouble64BE:
 				return 64L;
-    		case arrayOfCustom:
+			case arrayOfCustom:
 			case arrayOfBoolean:
 		}
 		return 1L;
@@ -400,7 +400,7 @@ public class ETPHelper {
 		GetDataArrays gda = GetDataArrays.newBuilder()
 				.setDataArrays(mapIdentifier).build();
 		long msg_id = etpClient.send(gda);
-		logger.info(msg_id + ") GetDataSubArray sent");
+		logger.debug(msg_id + ") GetDataSubArray sent");
 		return etpClient.getEtpClientSession().waitForResponse(msg_id, timeoutMS);
 	}
 
@@ -467,6 +467,17 @@ public class ETPHelper {
 				.setDataArrays(map).build();
 		long msg_id = etpClient.send(msg);
 		return etpClient.getEtpClientSession().waitForResponse(msg_id, timeoutMS);
+	}
+
+	public static void main(String[] argv){
+		String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><ns2:TriangulatedSetRepresentation xmlns=\"http://www.energistics.org/energyml/data/commonv2\" xmlns:ns2=\"http://www.energistics.org/energyml/data/resqmlv2\" uuid=\"f9a85fba-7f74-401f-99a2-03ff00a50086\" schemaVersion=\"2.2\" objectVersion=\"0\"><Citation><Title>null[Simplified]</Title><Creation>2023-10-27T17:04:25.403+02:00</Creation><LastUpdate>2023-10-27T17:04:25.404+02:00</LastUpdate><Description>A simplification of the representation null realised by Jerboa (a tool from University of Poitiers [FRANCE])</Description></Citation><ns2:TrianglePatch><ns2:NodeCount>10755</ns2:NodeCount><ns2:Triangles xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"IntegerExternalArray\"><NullValue>0</NullValue><CountPerValue>1</CountPerValue><Values><ExternalDataArrayPart><PathInExternalFile>RESQML/f9a85fba-7f74-401f-99a2-03ff00a50086triangle_patch0</PathInExternalFile></ExternalDataArrayPart></Values></ns2:Triangles><ns2:Geometry><ns2:Points xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"ns2:Point3dExternalArray\"><ns2:Coordinates><ExternalDataArrayPart><PathInExternalFile>RESQML/f9a85fba-7f74-401f-99a2-03ff00a50086point_patch0</PathInExternalFile></ExternalDataArrayPart></ns2:Coordinates></ns2:Points></ns2:Geometry></ns2:TrianglePatch> </ns2:TriangulatedSetRepresentation>";
+		Document xmlDoc = null;
+		try {
+			xmlDoc = XmlUtils.readXml(xml);
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+		}
+		System.out.println(XmlUtils.xml_getSubNodecontent(xmlDoc, "Citation.Title"));
 	}
 
 }

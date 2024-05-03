@@ -33,10 +33,8 @@ import org.eclipse.jetty.websocket.client.WebSocketClient;
 
 import java.net.ConnectException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+
 public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseable{
 	public static final Logger logger = LogManager.getLogger(ETPClient.class);
 
@@ -87,8 +85,10 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 		try {
 			etpClient.wsclient = new WebSocketClient();
 //			etpClient.wsclient = new WebSocketClient(new SslContextFactory());
-			URI echoUri = serverUri.toURI();
 
+			logger.debug(serverUri);
+
+			URI echoUri = serverUri.toURI();
 
 			etpClient.wsclient.start();
 //			etpClient.wsclient.setMaxBinaryMessageBufferSize((int) MAX_PAYLOAD_SIZE);
@@ -107,7 +107,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 			logger.debug("try to connect to " + echoUri);
 			etpClient.wsclient.connect(etpClient, echoUri, request);
 
-			logger.info("Client connected to " + echoUri);
+			logger.debug("Client connected to " + echoUri);
 
 			int connectionWaintingTime = connexionTimeout;
 			int waitingStep = 5;
@@ -115,14 +115,14 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 			while(!etpClient.isConnected() && connectionWaintingTime>0) {
 				try {
 					if(connectionWaintingTime % printStep == 0) {
-						logger.info("waiting for client connection");
+						logger.debug("waiting for client connection");
 					}
 					connectionWaintingTime -= waitingStep;
 					Thread.sleep(waitingStep);
 				} catch (InterruptedException e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }
 			}
 			/*if(connectionWaintingTime>0) {
-				logger.info(etpClient.openSessiontId+") Waiting for Request session answer");
+				logger.debug(etpClient.openSessiontId+") Waiting for Request session answer");
 				etpClient.openSession = (OpenSession) etpClient.getEtpClientSession().waitForResponse(etpClient.openSessiontId, 10000);
 
 				for(CharSequence k : etpClient.openSession.getEndpointCapabilities().keySet()) {
@@ -136,7 +136,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 							//etpClient.wsclient.getPolicy().setMaxTextMessageBufferSize(maxSocketMessageSize);
 							//etpClient.wsclient.getPolicy().setMaxTextMessageSize(maxSocketMessageSize);
 							//etpClient.maxByteSizePerMessage = maxSocketMessageSize;
-							//logger.info("MaxWebSocketMessagePayloadSize is set to : '" + maxSocketMessageSize + "'");
+							//logger.debug("MaxWebSocketMessagePayloadSize is set to : '" + maxSocketMessageSize + "'");
 						}catch (Exception e) {
 							logger.error(e.getMessage());
 							logger.debug(e.getMessage(), e);
@@ -144,7 +144,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 					}
 				}
 
-				logger.info(1+") Answer : " + etpClient.openSession);
+				logger.debug(1+") Answer : " + etpClient.openSession);
 				etpClient.supportedDataObj = etpClient.openSession.getSupportedDataObjects();
 
 				*//**
@@ -172,7 +172,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 	}
 
 	public long send(Message msg){
-		logger.info("Sending : " + msg.getBody().getClass().getSimpleName());
+		logger.debug("Sending : " + msg.getBody().getClass().getSimpleName());
 		long msgId = msg.getHeader().getMessageId() < 0 ? etpConnection.consumeMessageId() : msg.getHeader().getMessageId();
 		msg.getHeader().setMessageId(msgId);
 		for(byte[] b_msg : msg.encodeMessage(etpConnection.getClientInfo().MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE, etpConnection))
@@ -223,7 +223,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 	@Override
 	public void onWebSocketConnect(Session session) {
 		super.onWebSocketConnect(session);
-		logger.info("websocket connection established");
+		logger.debug("websocket connection established");
 
 		logger.debug("CONNECT : idl timeout" + session.getIdleTimeout());
 		logger.debug("CONNECT : protocol version " + session.getProtocolVersion());
@@ -233,10 +233,35 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 		etpClientSession.setEncoding(encoding);
 
 		// REQUEST SESSION
-		if(etpConnection.getConnectionType()== ConnectionType.CLIENT) {
+		if(etpConnection.getConnectionType() == ConnectionType.CLIENT) {
 			Uuid uuid = new Uuid(UUID.randomUUID().toString().getBytes());
-			RequestSession reqSess = ETPDefaultProtocolBuilder.buildRequestSession(uuid);
-//		logger.info("==> Sending Request session\n" + reqSess);
+//			RequestSession reqSess = ETPDefaultProtocolBuilder.buildRequestSession(uuid);
+			Date d = new Date();
+			RequestSession reqSess = RequestSession.newBuilder()
+				.setApplicationName(this.etpConnection.getServerCapabilities().getApplicationName() != null
+						? this.etpConnection.getServerCapabilities().getApplicationName()
+						: "etpproto-java (Geosiris)")
+				.setApplicationVersion(this.etpConnection.getServerCapabilities().getApplicationVersion() != null
+						? this.etpConnection.getServerCapabilities().getApplicationVersion()
+						: "1.0.2")
+				.setClientInstanceId(uuid)
+				.setCurrentDateTime(d.getTime())
+				.setEarliestRetainedChangeTime(0)
+				.setRequestedProtocols(this.etpConnection.getServerCapabilities().getSupportedProtocols() != null
+						? this.etpConnection.getServerCapabilities().getSupportedProtocols()
+						: new ArrayList<>())
+				.setSupportedDataObjects(this.etpConnection.getServerCapabilities().getSupportedDataObjects() != null
+						? this.etpConnection.getServerCapabilities().getSupportedDataObjects()
+						: new ArrayList<>())
+				.setSupportedCompression(this.etpConnection.getServerCapabilities().getSupportedCompression() != null
+						? this.etpConnection.getServerCapabilities().getSupportedCompression()
+						: new ArrayList<>())
+				.setSupportedFormats(this.etpConnection.getServerCapabilities().getSupportedFormats() != null
+						? this.etpConnection.getServerCapabilities().getSupportedFormats()
+						: new ArrayList<>())
+				.build();
+
+			logger.debug("==> Sending Request session\n" + reqSess);
 //		openSessiontId = etpClientSession.addPendingMessage(reqSess);
 			send(reqSess);
 		}
@@ -262,12 +287,12 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 			try {
 				etpClientSession.close(reason);
 			} catch (Exception e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }
-			logger.info("@onWebSocketClose session closed ");
+			logger.debug("@onWebSocketClose session closed ");
 
 			try {
 				wsclient.stop();
 			} catch (Exception e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }
-			logger.info("@onWebSocketClose FIN");
+			logger.debug("@onWebSocketClose FIN");
 		}else {
 			etpClientSession.close(reason);
 		}
@@ -276,7 +301,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 	@Override
 	public void onWebSocketError(Throwable cause) {
 		super.onWebSocketError(cause);
-		logger.info("@onWebSocketError error ");
+		logger.debug("@onWebSocketError error ");
 		if(cause instanceof ConnectException) {
 			logger.error("ETPClient connection exception");
 			try {
@@ -290,7 +315,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 	@Override
 	public void onWebSocketText(String message) {
 		super.onWebSocketText(message);
-		logger.info("@onWebSocketText Msg : " + message);
+		logger.debug("@onWebSocketText Msg : " + message);
 		logger.debug(ETPUtils.readMessagesJSON(message));
 		try{
 			Message msg = new Message(message);
@@ -309,9 +334,9 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 	@Override
 	public void onWebSocketBinary(byte[] payload, int offset, int len) {
 		super.onWebSocketBinary(payload, offset, len);
-		logger.info("-----\nByte message recieves : " + len + " bytes \n-----");
+		logger.debug("-----Byte message recieves : " + len + " bytes -----");
 		if(len<200) {
-			logger.info("Msg recieved : \n" + payload);
+			logger.debug("Msg recieved : \n" + payload);
 		}
 		try{
 //			Message msg = new Message(ByteBuffer.wrap(payload, offset, len));
@@ -320,7 +345,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 				Long id = msg.getHeader().getCorrelationId() == 0 ? msg.getHeader().getMessageId() :msg.getHeader().getCorrelationId();
 				etpClientSession.addRecievedObject(id, msg);
 				for(byte[] answer : etpConnection.handleBytesGenerator(payload)){
-					logger.info("Sending : " + answer.length + " bytes " + new Message(answer).getBody());
+					logger.debug("Sending : " + answer.length + " bytes " + new Message(answer).getBody());
 					etpClientSession.addPendingMessage(answer);
 				}
 			}
@@ -343,7 +368,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 	}
 
 	public void closeClient() {
-		logger.info("Asking for closing client");
+		logger.debug("Asking for closing client");
 		try {
 			long msgId = etpConnection.consumeMessageId();
 			etpClientSession.addPendingMessage(new Message(encoding, ETPDefaultProtocolBuilder.buildCloseSession("Finished"), msgId));
@@ -354,8 +379,8 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 			// etpClientSession.close("no response recived after sending CloseSession");
 		}finally {
 			try {
-				logger.info("Ping state : " + pingThread.getState());
-				logger.info("Deliver state : " + deliveryThread.getState());
+				logger.debug("Ping state : " + pingThread.getState());
+				logger.debug("Deliver state : " + deliveryThread.getState());
 			}catch (Exception ignore) { }
 		}
 	}

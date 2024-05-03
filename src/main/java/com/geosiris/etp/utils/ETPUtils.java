@@ -57,7 +57,7 @@ public class ETPUtils {
 
 	public static <T extends MessageHeader, M extends SpecificRecordBase> long sendDatum(
 			T header, M srb, Session s, long maxMessageSize) throws IOException {
-//		logger.info("======== Sending message [" + header.getProtocol() + "][" + header.getMessageType() + "] " + srb.getClass() + " ========");
+//		logger.debug("======== Sending message [" + header.getProtocol() + "][" + header.getMessageType() + "] " + srb.getClass() + " ========");
 
 		// Send data
 		header.setMessageFlags((header.getMessageFlags() | MessageFlags.FINALPART));
@@ -76,7 +76,7 @@ public class ETPUtils {
 			System.arraycopy(bytes_msg, 0, finalMsg, bytes_Header.length, bytes_msg.length);
 
 			f = sendBytes(finalMsg, s);
-			logger.info("======== SENDING BINARY (" + f + " bytes) : ========");
+			logger.debug("======== SENDING BINARY (" + f + " bytes) : ========");
 		}else {
 			header.setMessageFlags((Integer.MAX_VALUE ^ MessageFlags.FINALPART));
 			byte[] bytes_Header_not_fin = getWrittenBytes(header);
@@ -86,14 +86,14 @@ public class ETPUtils {
 				System.arraycopy(bytes_Header_not_fin, 0, part_msg, 0, bytes_Header_not_fin.length);
 				System.arraycopy(bytes_msg, 0, part_msg, bytes_Header_not_fin.length, bytes_msg.length);
 				sendBytes(part_msg, s);
-				logger.info("======== SENDING BINARY [PART MESSAGE] (" + part_msg.length + " bytes) : ========");
+				logger.debug("======== SENDING BINARY [PART MESSAGE] (" + part_msg.length + " bytes) : ========");
 			}
 
 			byte[] part_msg = new byte[bytes_Header.length + bytes_msg.length];
 			System.arraycopy(bytes_Header, 0, part_msg, 0, bytes_Header.length);
 			System.arraycopy(bytes_msg, 0, part_msg, bytes_Header.length, bytes_msg.length);
 			sendBytes(part_msg, s);
-			logger.info("======== SENDING BINARY [PART MESSAGE] (" + part_msg.length + " bytes) : ========");
+			logger.debug("======== SENDING BINARY [PART MESSAGE] (" + part_msg.length + " bytes) : ========");
 		}
 		//long f = sendBytes(bf, s.getRemote().);
 
@@ -102,10 +102,10 @@ public class ETPUtils {
 
 	public static <T extends MessageHeader, M extends SpecificRecordBase> void sendDatumJson(
 			T obj, M srb, Session s, long maxMessageSize) throws IOException {
-		logger.info("SENDING JSON : ");
+		logger.debug("SENDING JSON : ");
 
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		logger.info("Sending message Protocol[" + obj.getProtocol() + "]Type[" + obj.getMessageType() + "]");
+		logger.debug("Sending message Protocol[" + obj.getProtocol() + "]Type[" + obj.getMessageType() + "]");
 		JsonEncoder jsonEncoder = EncoderFactory.get().jsonEncoder(
 				obj.getSchema(), out);
 		SpecificDatumWriter<T> headerWriter = new SpecificDatumWriter<>(
@@ -113,7 +113,7 @@ public class ETPUtils {
 		headerWriter.write(obj, jsonEncoder);
 		jsonEncoder.flush();
 
-		//logger.info("HEADER : " + out.toString());
+		//logger.debug("HEADER : " + out.toString());
 		String firstPart = out.toString();
 		// Json not accept to update schema internally in the method write,so we
 		// have to assign with the new schema. This same reasoning is applied in
@@ -128,17 +128,17 @@ public class ETPUtils {
 
 		// Send data
 		out.close();
-		logger.info("Sending message : \n" + firstPart + ";" + second);
+		logger.debug("Sending message : \n" + firstPart + ";" + second);
 
 		s.getRemote().sendString(firstPart + ";" + second, new WriteCallback() {
 			@Override
 			public void writeSuccess() {
-				logger.info("> sending succed");
+				logger.debug("> sending succed");
 			}
 
 			@Override
 			public void writeFailed(Throwable arg0) {
-				logger.info("> sending data failed");
+				logger.debug("> sending data failed");
 				logger.error(arg0.getMessage());
 				logger.debug(arg0.getMessage(), arg0);
 			}
@@ -152,11 +152,11 @@ public class ETPUtils {
 		try {
 			headerReader.read(mh, dec);
 		} catch (EOFException ex1) {
-			logger.info("No bytes are in file");
+			logger.debug("No bytes are in file");
 		} catch (IOException e2) { logger.error(e2.getMessage()); logger.debug(e2.getMessage(), e2); }
 
-//		logger.info("]==> Recieved message has flags : " + byteArrayToString(toBitArrayLeftToRight(mh.getMessageFlags())) );
-//		logger.info("Header " + mh.getMessageType() + " " + mh.getCorrelationId() + " -id-> " + mh.getMessageId());
+//		logger.debug("]==> Recieved message has flags : " + byteArrayToString(toBitArrayLeftToRight(mh.getMessageFlags())) );
+//		logger.debug("Header " + mh.getMessageType() + " " + mh.getCorrelationId() + " -id-> " + mh.getMessageId());
 		//      if (supportedProtocol.containsKey(mh.getProtocol())) {
 
 		/*
@@ -170,8 +170,8 @@ public class ETPUtils {
 			byte[] b_msgHeader = Message.encode(mh);
 			int header_bytes_len =  b_msgHeader.length;
 
-//			logger.info(mh);
-//			logger.info("MSG FLAG : " + mh.getMessageFlags());
+//			logger.debug(mh);
+//			logger.debug("MSG FLAG : " + mh.getMessageFlags());
 			Object decoded_msg = Arrays.copyOfRange(byteMsg, header_bytes_len, byteMsg.length);
 			if(Message.isFinalePartialMsg(mh) ) { //|| mh.getMessageType()>1000
 				try {
@@ -182,7 +182,7 @@ public class ETPUtils {
 					logger.error("<E> err handling " + ((byte[])decoded_msg).length);
 				}
 			}
-//			logger.info("DECODED : " + decoded_msg);
+//			logger.debug("DECODED : " + decoded_msg);
 			return new Message(null, mh, (SpecificRecordBase) decoded_msg);
 		}
 	}
@@ -210,7 +210,7 @@ public class ETPUtils {
 
 				try {
 					headerReader.read(mh, dec);
-				} catch (EOFException ex1) { logger.info("Empty message");
+				} catch (EOFException ex1) { logger.debug("Empty message");
 				} catch (IOException e2) { logger.error(e2.getMessage()); logger.debug(e2.getMessage(), e2); }
 				return new Pair<>(mh.getMessageId(), readMessagesJSON(mh, msg.substring(msg.indexOf(";") + 1)));
 			}
@@ -394,15 +394,15 @@ public class ETPUtils {
 
 	public static void main(String [] argv) {
 
-		logger.info(Integer.toBinaryString(Integer.MAX_VALUE ^ MessageFlags.FINALPART));
+		logger.debug(Integer.toBinaryString(Integer.MAX_VALUE ^ MessageFlags.FINALPART));
 
-		logger.info((int) Math.ceil(((float)2)/3));
+		logger.debug((int) Math.ceil(((float)2)/3));
 
-		logger.info(Integer.toBinaryString(Integer.MAX_VALUE));
+		logger.debug(Integer.toBinaryString(Integer.MAX_VALUE));
 
-		logger.info(byteArrayToString(toBitArrayLeftToRight(19)));
+		logger.debug(byteArrayToString(toBitArrayLeftToRight(19)));
 
-		logger.info(2 & MessageFlags.FINALPART);
+		logger.debug(2 & MessageFlags.FINALPART);
 
 		int[] firstArray = {23,45,12,78,4,90,1};        //source array
 		int[] secondArray = {77,11,45,88,32,56,3};  //destination array
@@ -413,7 +413,7 @@ public class ETPUtils {
 
 		System.arraycopy(secondArray, 0, result, 0, sal);
 
-		logger.info(Arrays.toString(result));    //prints the resultant array
+		logger.debug(Arrays.toString(result));    //prints the resultant array
 
 
 		List<int[]> partialList = new ArrayList<>();
@@ -425,7 +425,7 @@ public class ETPUtils {
 		partialList.add(f2);
 		int fullSize = partialList.stream().map(ll -> ll.length).reduce(0, Integer::sum);
 		int[] entireMsg = new int[fullSize];
-		logger.info(fullSize);
+		logger.debug(fullSize);
 		int accumulator = 0;
 		for(int [] partialMsg : partialList) {
 			System.arraycopy(partialMsg, 0, entireMsg, accumulator, partialMsg.length);

@@ -16,12 +16,13 @@ limitations under the License.
 package com.geosiris.etp.websocket;
 
 import Energistics.Etp.v12.Datatypes.DataValue;
+import Energistics.Etp.v12.Datatypes.ServerCapabilities;
 import Energistics.Etp.v12.Datatypes.SupportedProtocol;
 import Energistics.Etp.v12.Protocol.Core.Acknowledge;
-import com.geosiris.etp.communication.ETPinfo;
-import com.geosiris.etp.communication.Message;
-import com.geosiris.etp.communication.MessageEncoding;
-import com.geosiris.etp.communication.MessageFlags;
+import com.geosiris.etp.communication.*;
+import com.geosiris.etp.protocols.CommunicationProtocol;
+import com.geosiris.etp.protocols.ProtocolHandler;
+import com.geosiris.etp.protocols.handlers.StoreHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.websocket.api.Session;
@@ -86,18 +87,18 @@ public class ETPClientSession implements Runnable{
 						+ receivedAcknowledge.get(correlationId));
 			}
 			receivedAcknowledge.put(correlationId, msg);
-			logger.info("\n <== Adding received Acknowledge [" + correlationId +"] " + msg.getBody().getClass() + "\n\n");
+			logger.debug("\n <== Adding received Acknowledge [" + correlationId +"] " + msg.getBody().getClass() + "\n\n");
 		}else {
 			if(!receivedObjects.containsKey(correlationId)) {
 				receivedObjects.put(correlationId, new ArrayList<>());
 			}
 			receivedObjects.get(correlationId).add(msg);
-			logger.info("\n <== Adding received object [" + correlationId +"] " + msg.getBody().getClass() + "\n\n");
+			logger.debug("\n <== Adding received object [" + correlationId +"] " + msg.getBody().getClass() + "\n\n");
 		}
 	}
 
 	public void addRecievedString(String msg) {
-		logger.info("Adding received string message : " + msg);
+		logger.debug("Adding received string message : " + msg);
 		receivedStringMessages.add(msg);
 	}
 
@@ -111,7 +112,7 @@ public class ETPClientSession implements Runnable{
 	}
 
 	public LinkedList<byte[]> handleDelivery(LinkedList<byte[]> messages) {
-		logger.info("Delivering : ");
+		logger.debug("Delivering : ");
 		if(messages != null) {
 			while(messages.size()>0) {
 				byte[] msg = messages.pollFirst();
@@ -157,7 +158,7 @@ public class ETPClientSession implements Runnable{
 	}
 
 	public void close(String message) {
-		logger.info("Closing session");
+		logger.debug("Closing session");
 		this.wsSession.close(StatusCode.NORMAL, message);
 		//		this.wsSession.close();
 	}
@@ -172,7 +173,7 @@ public class ETPClientSession implements Runnable{
 
 			if(!this.pendingMessages.isEmpty())
 			{
-				//				logger.info("[TH] SESSION : trying to send pending msg");
+				//				logger.debug("[TH] SESSION : trying to send pending msg");
 				this.pendingMessages = handleDelivery(this.pendingMessages);
 			}
 			try { Thread.sleep(sleepTime);
@@ -240,6 +241,21 @@ public class ETPClientSession implements Runnable{
 		supportedProtocol.add(spStoreNotification);
 		//		supportedProtocol.add(spGrowingObjectNotification);
 
+		return supportedProtocol;
+
+	}
+
+	private static List<SupportedProtocol> getSupportedProtocol(Map<CommunicationProtocol, ProtocolHandler> handlers) {
+		List<SupportedProtocol> supportedProtocol = new ArrayList<>();
+		HashMap<CharSequence, DataValue> map = new HashMap<>();
+
+		for(Map.Entry<CommunicationProtocol, ProtocolHandler> e: handlers.entrySet()){
+//			StoreHandler
+//			SupportedProtocol sp = SupportedProtocol.newBuilder()
+//					.setProtocol(e.getKey().id)
+//					.setRole(e.getValue())
+//					.build();
+		}
 		return supportedProtocol;
 
 	}
