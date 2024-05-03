@@ -319,7 +319,6 @@ public class Message {
 					try {
 						msgResult.addAll(_encodeMessageChunk(this, bodySize, max_bytes_per_msg, connection));
 					} catch (ETPError.InternalError e) {
-						e.printStackTrace();
 						logger.error(e.getMessage());
 						logger.debug(e.getMessage(), e);
 						Message msg_err = e.to_etp_message(connection.consumeMessageId(),
