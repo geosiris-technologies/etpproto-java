@@ -64,9 +64,9 @@ public class Main {
 //		test_get_big_data_array(args);
 //		test_multiple_data_arraySmall(args);
 //		test_multiple_data_REST(args);
-//		test_get_dataspaces(args);
+		test_get_dataspaces(args);
 //		test_get_resources(args);
-		test_big_messageREST(args);
+//		test_big_messageREST(args);
 	}
 
 	public static void test_get_resources(String[] args) throws Exception {

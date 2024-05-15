@@ -152,7 +152,7 @@ public class ETPHelperREST {
 
     public static String getHTTPUrl(String rootUrl){
         if(!rootUrl.toLowerCase().startsWith("http")){
-            rootUrl = rootUrl.replaceFirst("[^:]+:", "http:");
+            rootUrl = rootUrl.replaceFirst("^[^:]+:", "http:");
         }
         return rootUrl;
     }
