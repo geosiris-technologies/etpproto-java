@@ -729,6 +729,23 @@ public class ETPHelper {
 
 	/* PutDataArray */
 
+	public static PutDataArrays buildPutDataArray(String uri, List<Pair<String, DataArray>> das){
+		Map<CharSequence, PutDataArraysType> map = new HashMap<>();
+		for(Pair<String, DataArray> pathAndDa: das) {
+			DataArrayIdentifier dai = DataArrayIdentifier.newBuilder()
+					.setUri(uri)
+					.setPathInResource(pathAndDa.l())
+					.build();
+			map.put(String.valueOf(map.size()), PutDataArraysType.newBuilder()
+					.setUid(dai)
+					.setArray(pathAndDa.r())
+					.build()
+			);
+		}
+		return PutDataArrays.newBuilder()
+				.setDataArrays(map).build();
+	}
+
 	public static List<Message> sendPutDataArray(ETPClient etpClient, String uri, String pathInHDF5, DataArray da, int timeoutMS){
 		Map<CharSequence, PutDataArraysType> map = new HashMap<>();
 		DataArrayIdentifier dai = DataArrayIdentifier.newBuilder()

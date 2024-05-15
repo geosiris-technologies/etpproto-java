@@ -21,6 +21,8 @@ import Energistics.Etp.v12.Datatypes.DataArrayTypes.DataArray;
 import Energistics.Etp.v12.Datatypes.DataValue;
 import Energistics.Etp.v12.Datatypes.Object.ContextScopeKind;
 import Energistics.Etp.v12.Datatypes.ServerCapabilities;
+import Energistics.Etp.v12.Protocol.DataArray.PutDataArrays;
+import Energistics.Etp.v12.Protocol.DataArray.PutDataArraysResponse;
 import com.geosiris.etp.communication.ClientInfo;
 import com.geosiris.etp.communication.ConnectionType;
 import com.geosiris.etp.communication.ETPConnection;
@@ -30,6 +32,8 @@ import com.geosiris.etp.protocols.ProtocolHandler;
 import com.geosiris.etp.protocols.handlers.generated.*;
 import com.geosiris.etp.utils.ETPHelper;
 import com.geosiris.etp.utils.ETPHelperREST;
+import com.geosiris.etp.utils.ETPUri;
+import com.geosiris.etp.utils.Pair;
 import com.geosiris.etp.websocket.ETPClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -59,7 +63,24 @@ public class Main {
 //		test_multiple_data_array(args);
 //		test_get_big_data_array(args);
 //		test_multiple_data_arraySmall(args);
-		test_multiple_data_REST(args);
+//		test_multiple_data_REST(args);
+//		test_get_dataspaces(args);
+//		test_get_resources(args);
+		test_big_messageREST(args);
+	}
+
+	public static void test_get_resources(String[] args) throws Exception {
+		logger.info(ETPHelperREST.getResources(args[0], new ETPUri("volve-eqn-plus").toString(), ContextScopeKind.self));
+	}
+
+	public static void test_get_dataspaces(String[] args) throws Exception {
+		ETPClient client = getClient(1 << 18, args);
+		try {
+			logger.info(ETPHelperREST.getDataspaces(client));
+		}finally {
+			client.closeClient();
+			client.close();
+		}
 	}
 
 	public static void test_multiple_data_REST(String[] args) throws Exception {
@@ -243,6 +264,33 @@ public class Main {
 				client.close();
 			}
 		}
+	}
+
+	public static void test_big_messageREST(String[] args) throws Exception {
+		List<Double> values = new ArrayList<>();
+		int nbTr = 1000000;
+		for (int i = 0; i < nbTr; i++) {
+			values.add(i * 3.0);
+			values.add(i * 3.0 + 1.0);
+			values.add(i * 3.0 + 2.0);
+		}
+//        ETPDataManager eda = SimplificationServer.readEtpServerConfig(null);
+		AnyArray aa_points = AnyArray.newBuilder()
+				.setItem(ArrayOfDouble.newBuilder()
+						.setValues(values).build()
+				).build();
+		DataArray da_points = DataArray.newBuilder()
+				.setDimensions(List.of((long) nbTr, 3L))
+				.setData(aa_points)
+				.build();
+
+		PutDataArraysResponse pdar = ETPHelperREST.putDataArrays(
+				args[0],
+				"eml:///dataspace('volve-eqn-plus')/resqml22.TriangulatedSetRepresentation(f3a44228-4f8e-47a7-b999-86f50c3b5857)",
+				List.of(new Pair<>("RESQML/f3a44228-4f8e-47a7-b999-86f50c3b5857/point_patch0", da_points)
+				)
+		);
+		logger.info(pdar);
 	}
 
 

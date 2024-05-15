@@ -103,11 +103,11 @@ public class Message {
 		}
 	}
 
-	public static <T extends SpecificRecordBase> SpecificRecordBase decodeJson(String data, T obj) {
+	public static <T extends SpecificRecordBase> T decodeJson(String data, T obj) {
 		Gson gson = new GsonBuilder().registerTypeAdapter(CharSequence.class, new InterfaceSerializer<>(String.class))
 				.create();
 
-		return gson.fromJson(data, obj.getClass());
+		return (T) gson.fromJson(data, obj.getClass());
 //		return null;
 	}
 
