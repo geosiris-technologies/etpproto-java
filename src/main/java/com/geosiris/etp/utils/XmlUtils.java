@@ -67,7 +67,7 @@ public class XmlUtils {
 
 	public static String getEnergymlTypeInXml(Document fileContent) {
 		String rootNamespace = fileContent.getFirstChild().getNamespaceURI().toLowerCase();
-		logger.info("namespace " + rootNamespace);
+		logger.debug("namespace " + rootNamespace);
 		if(rootNamespace.matches(".*/resqml(v2)?$")){
 			return "resqml";
 		}else if(rootNamespace.matches(".*/witsml(v2)?$")){

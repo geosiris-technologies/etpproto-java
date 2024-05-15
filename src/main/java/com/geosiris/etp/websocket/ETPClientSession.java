@@ -22,6 +22,8 @@ import com.geosiris.etp.communication.ETPinfo;
 import com.geosiris.etp.communication.Message;
 import com.geosiris.etp.communication.MessageEncoding;
 import com.geosiris.etp.communication.MessageFlags;
+import com.geosiris.etp.protocols.CommunicationProtocol;
+import com.geosiris.etp.protocols.ProtocolHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.websocket.api.Session;
@@ -30,6 +32,7 @@ import org.eclipse.jetty.websocket.api.StatusCode;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ETPClientSession implements Runnable{
 	public static final Logger logger = LogManager.getLogger(ETPClientSession.class);
@@ -86,18 +89,18 @@ public class ETPClientSession implements Runnable{
 						+ receivedAcknowledge.get(correlationId));
 			}
 			receivedAcknowledge.put(correlationId, msg);
-			logger.info("\n <== Adding received Acknowledge [" + correlationId +"] " + msg.getBody().getClass() + "\n\n");
+			logger.debug("\n <== Adding received Acknowledge [" + correlationId +"] " + msg.getBody().getClass() + "\n\n");
 		}else {
 			if(!receivedObjects.containsKey(correlationId)) {
 				receivedObjects.put(correlationId, new ArrayList<>());
 			}
 			receivedObjects.get(correlationId).add(msg);
-			logger.info("\n <== Adding received object [" + correlationId +"] " + msg.getBody().getClass() + "\n\n");
+			logger.debug("\n <== Adding received object [" + correlationId +"] " + msg.getBody().getClass() + "\n\n");
 		}
 	}
 
 	public void addRecievedString(String msg) {
-		logger.info("Adding received string message : " + msg);
+		logger.debug("Adding received string message : " + msg);
 		receivedStringMessages.add(msg);
 	}
 
@@ -111,7 +114,7 @@ public class ETPClientSession implements Runnable{
 	}
 
 	public LinkedList<byte[]> handleDelivery(LinkedList<byte[]> messages) {
-		logger.info("Delivering : ");
+		logger.debug("Delivering : ");
 		if(messages != null) {
 			while(messages.size()>0) {
 				byte[] msg = messages.pollFirst();
@@ -144,20 +147,54 @@ public class ETPClientSession implements Runnable{
 	public List<Message> waitForResponse(long msgId, int maxWaitingTime) {
 		int currentWaitingTime = 0;
 		int sleepTime = 10; //Math.min(10, maxWaitingTime / 10);
-		while(currentWaitingTime < maxWaitingTime
-				&& ! this.receivedObjects.containsKey(msgId)) {
+		List<Message> res = getMessage(msgId, true, false);
+		while(wsSession.isOpen() && currentWaitingTime < maxWaitingTime
+				&& res == null
+		) {
 			try { Thread.sleep(sleepTime);
 			} catch (InterruptedException e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }
 			currentWaitingTime += sleepTime;
+			res = getMessage(msgId, true, false);
 		}
-		if(this.receivedObjects.containsKey(msgId)) {
-			return this.receivedObjects.get(msgId);
+		return res;
+	}
+
+	public Map<Long, List<Message>> waitForResponse(List<Long> msgIds, int maxWaitingTime) {
+		Map<Long, List<Message>> res = new HashMap<>();
+		int currentWaitingTime = 0;
+		int sleepTime = 10; //Math.min(10, maxWaitingTime / 10);
+
+		while(wsSession.isOpen() && currentWaitingTime < maxWaitingTime && res.size() < msgIds.size()) {
+			try { Thread.sleep(sleepTime);
+			} catch (InterruptedException e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }
+			currentWaitingTime += sleepTime;
+			for(Long msgId: msgIds) {
+				List<Message> msgs = getMessage(msgId, true, false);
+				if(msgs != null){
+					res.put(msgId, msgs);
+				}
+			}
+		}
+		if(res.size() < msgIds.size()){
+			logger.error("Not all message received (" + msgIds.stream().filter(k -> !res.containsKey(k)).map(String::valueOf).collect(Collectors.joining(", ")));
+		}
+		return res;
+	}
+
+	public List<Message> getMessage(long msgId, boolean clean, boolean partialIsOk){
+		if(this.receivedObjects.containsKey(msgId)
+				&& (partialIsOk || this.receivedObjects.get(msgId).stream().map(Message::isFinalMsg).reduce(Boolean.FALSE, Boolean::logicalOr))
+		){
+			List<Message> res = this.receivedObjects.get(msgId);
+			if(clean && !partialIsOk)
+				this.receivedObjects.remove(msgId);
+			return res;
 		}
 		return null;
 	}
 
 	public void close(String message) {
-		logger.info("Closing session");
+		logger.debug("Closing session");
 		this.wsSession.close(StatusCode.NORMAL, message);
 		//		this.wsSession.close();
 	}
@@ -172,7 +209,7 @@ public class ETPClientSession implements Runnable{
 
 			if(!this.pendingMessages.isEmpty())
 			{
-				//				logger.info("[TH] SESSION : trying to send pending msg");
+				//				logger.debug("[TH] SESSION : trying to send pending msg");
 				this.pendingMessages = handleDelivery(this.pendingMessages);
 			}
 			try { Thread.sleep(sleepTime);
@@ -240,6 +277,21 @@ public class ETPClientSession implements Runnable{
 		supportedProtocol.add(spStoreNotification);
 		//		supportedProtocol.add(spGrowingObjectNotification);
 
+		return supportedProtocol;
+
+	}
+
+	private static List<SupportedProtocol> getSupportedProtocol(Map<CommunicationProtocol, ProtocolHandler> handlers) {
+		List<SupportedProtocol> supportedProtocol = new ArrayList<>();
+		HashMap<CharSequence, DataValue> map = new HashMap<>();
+
+		for(Map.Entry<CommunicationProtocol, ProtocolHandler> e: handlers.entrySet()){
+//			StoreHandler
+//			SupportedProtocol sp = SupportedProtocol.newBuilder()
+//					.setProtocol(e.getKey().id)
+//					.setRole(e.getValue())
+//					.build();
+		}
 		return supportedProtocol;
 
 	}
