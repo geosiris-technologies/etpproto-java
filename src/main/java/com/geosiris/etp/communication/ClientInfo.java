@@ -16,16 +16,17 @@ limitations under the License.
 package com.geosiris.etp.communication;
 
 
+import com.geosiris.etp.websocket.ETPClient;
 import org.eclipse.jetty.http.HttpURI;
 public class ClientInfo {
     protected static long instancesCount;
 
     private final long identifier;
     private final HttpURI url;
-    public final int MAX_WEBSOCKET_FRAME_PAYLOAD_SIZE;
-    public final int MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE;
+    public int MAX_WEBSOCKET_FRAME_PAYLOAD_SIZE;
+    public int MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE;
 
-    public ClientInfo(
+    private ClientInfo(
             HttpURI url,
             int maxWebSocketFramePayloadSize,
             int maxWebSocketMessagePayloadSize
@@ -36,7 +37,7 @@ public class ClientInfo {
         this.MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE = maxWebSocketMessagePayloadSize;
     }
     public ClientInfo(HttpURI url){
-        this(url, 4194304, 16777216);
+        this(url, ETPClient.MAX_PAYLOAD_SIZE, ETPClient.MAX_PAYLOAD_SIZE);
     }
 
     @Override
@@ -46,5 +47,13 @@ public class ClientInfo {
 
     public String printPrefix(){
         return "[" + this.identifier + "] " + this.url;
+    }
+
+    public void setMAX_WEBSOCKET_FRAME_PAYLOAD_SIZE(int MAX_WEBSOCKET_FRAME_PAYLOAD_SIZE) {
+        this.MAX_WEBSOCKET_FRAME_PAYLOAD_SIZE = MAX_WEBSOCKET_FRAME_PAYLOAD_SIZE;
+    }
+
+    public void setMAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE(int MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE) {
+        this.MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE = MAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE;
     }
 }

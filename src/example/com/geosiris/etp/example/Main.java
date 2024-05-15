@@ -17,8 +17,8 @@ package com.geosiris.etp.example;
 
 import Energistics.Etp.v12.Datatypes.AnyArray;
 import Energistics.Etp.v12.Datatypes.ArrayOfDouble;
-import Energistics.Etp.v12.Datatypes.Contact;
 import Energistics.Etp.v12.Datatypes.DataArrayTypes.DataArray;
+import Energistics.Etp.v12.Datatypes.DataValue;
 import Energistics.Etp.v12.Datatypes.Object.ContextScopeKind;
 import Energistics.Etp.v12.Datatypes.ServerCapabilities;
 import com.geosiris.etp.communication.ClientInfo;
@@ -29,6 +29,7 @@ import com.geosiris.etp.protocols.CommunicationProtocol;
 import com.geosiris.etp.protocols.ProtocolHandler;
 import com.geosiris.etp.protocols.handlers.generated.*;
 import com.geosiris.etp.utils.ETPHelper;
+import com.geosiris.etp.utils.ETPHelperREST;
 import com.geosiris.etp.websocket.ETPClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,10 +37,8 @@ import org.eclipse.jetty.http.HttpURI;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 public class Main {
 	public static Logger logger = LogManager.getLogger(Main.class);
 	public static String file1 = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
@@ -56,7 +55,157 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 //		etpClientTest(args);
 //		etpClientTest2(args);
-		test_big_message(args);
+//		test_big_message(args);
+//		test_multiple_data_array(args);
+//		test_get_big_data_array(args);
+//		test_multiple_data_arraySmall(args);
+		test_multiple_data_REST(args);
+	}
+
+	public static void test_multiple_data_REST(String[] args) throws Exception {
+		ETPClient client = getClient(1<<18, args);
+		String uri = "eml:///dataspace('volve-eqn-plus')/resqml22.TriangulatedSetRepresentation(c6ec3a44-37a3-421f-ade6-91b2ced532e8)";
+		List<String> path = Arrays.asList(
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch0",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch1",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch2",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch3",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch4",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch5",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch6",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch7",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch8",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch9",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch10",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch11",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch12",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch13",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch14",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch15",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch16",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch17",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch18",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch19",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch20",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch21",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch22"
+		);
+		try {
+			logger.info(ETPHelperREST.getMultipleDataArrays(client, uri, path).getDataArrays().size());
+		}finally {
+			client.closeClient();
+			client.close();
+		}
+	}
+
+	public static void test_multiple_data_arraySmall(String[] args) throws Exception {
+		ETPClient client = getClient(1<<18, args);
+
+		String uri = "eml:///dataspace('volve-eqn-plus')/resqml22.TriangulatedSetRepresentation(c6ec3a44-37a3-421f-ade6-91b2ced532e8)";
+		List<String> path = Arrays.asList(
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch0",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch1",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch2",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch3",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch4",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch5",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch6",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch7",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch8",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch9",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch10",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch11",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch12",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch13",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch14",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch15",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch16",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch17",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch18",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch19",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch20",
+//				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch21",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch22"
+		);
+		try {
+//			ETPHelper.getMultipleDataArrays(client, uri, path, 50000);
+//			System.out.println("[");
+			for(Map.Entry<String, List<Number>> e: ETPHelper.getMultipleDataArrays(client, uri, path, 50000).entrySet()){
+				System.out.println("> " + e.getKey() + ", " + e.getValue().size());
+			}
+//			System.out.println("]");
+//			System.out.println("[");
+//			for(Map.Entry<CharSequence, DataArrayMetadata> i: ETPHelper.getMetaData(client, uri, path, 50000).getArrayMetadata().entrySet()){
+//				System.out.print(i.getKey() + ") " + i.getValue().getDimensions() + ", ");
+//			}
+//			System.out.println("]");
+//			Thread.sleep(3000000);
+		}finally {
+			client.closeClient();
+			client.close();
+		}
+
+	}
+
+	public static void test_multiple_data_array(String[] args) throws Exception {
+		ETPClient client = getClient(1<<16, args);
+
+		String uri = "eml:///dataspace('volve-eqn-plus')/resqml22.TriangulatedSetRepresentation(c6ec3a44-37a3-421f-ade6-91b2ced532e8)";
+		List<String> path = Arrays.asList(
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch0",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch1",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch2",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch3",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch4",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch5",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch6",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch7",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch8",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch9",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch10",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch11",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch12",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch13",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch14",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch15",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch16",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch17",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch18",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch19",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch20",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch21",
+				"RESQML/c6ec3a44-37a3-421f-ade6-91b2ced532e8/point_patch22"
+		);
+		try {
+			ETPHelper.getMultipleDataArrays(client, uri, path, 50000);
+//			System.out.println("[");
+//			for(Number i: ETPHelper.getMultipleDataArrays(client, uri, path, 50000)){
+//				System.out.print(i + ", ");
+//			}
+//			System.out.println("]");
+//			System.out.println("[");
+//			for(Map.Entry<CharSequence, DataArrayMetadata> i: ETPHelper.getMetaData(client, uri, path, 50000).getArrayMetadata().entrySet()){
+//				System.out.print(i.getKey() + ") " + i.getValue().getDimensions() + ", ");
+//			}
+//			System.out.println("]");
+			Thread.sleep(3000000);
+		}finally {
+			client.closeClient();
+		}
+
+	}
+
+	public static void test_get_big_data_array(String[] args) throws Exception {
+		ETPClient client = getClient(1<<16, args);
+
+		String uri = "eml:///dataspace('volve-eqn-plus')/resqml20.obj_Grid2dRepresentation(3a45fb70-8ba9-4341-a701-0f514270ba9c)";
+		try {
+			ETPHelper.sendGetDataArray(client, uri, "/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0", 50000);
+			Thread.sleep(3000000);
+		}finally {
+			client.closeClient();
+		}
+
 	}
 
 	public static void test_big_message(String[] args) throws Exception {
@@ -98,6 +247,10 @@ public class Main {
 
 
 	public static ETPClient getClient(String[] args){
+		return getClient(null, args);
+	}
+
+	public static ETPClient getClient(Integer maxMsgSize, String[] args){
 		logger.info("Usage : java -jar myfile.jar [SERVER_URL] [LOGIN] [PASSWORD]");
 
 		HttpURI etpServerUri = null;
@@ -125,12 +278,16 @@ public class Main {
 				e.printStackTrace();
 			}
 		}
+		Map<CharSequence, DataValue> mapCaps = new HashMap<>();
 
+		ServerCapabilities caps = new ServerCapabilities();
+		caps.setEndpointCapabilities(mapCaps);
 
-		ClientInfo clientInfo = new ClientInfo(etpServerUri, 32768, 65536);
+		ClientInfo clientInfo = new ClientInfo(etpServerUri);
 		Map<CommunicationProtocol, ProtocolHandler> protocolHandlers = new HashMap<>();
 		protocolHandlers.put(CoreHandler_DefaultPrinter.protocol, new CoreHandler_DefaultPrinter());
 		protocolHandlers.put(DiscoveryHandler_DefaultPrinter.protocol, new DiscoveryHandler_DefaultPrinter());
+		protocolHandlers.put(DataArrayHandler_DefaultPrinter.protocol, new DataArrayHandler_DefaultPrinter());
 
 //		ServerCapabilities caps = ServerCapabilities.newBuilder()
 //				.setApplicationVersion("1.0.2")
@@ -138,9 +295,9 @@ public class Main {
 //				.setContactInformation(Contact.newBuilder().setContactEmail("").setContactName("Val").setContactPhone("").build())
 //				.build();
 
-		ETPConnection etpConnection = new ETPConnection(ConnectionType.CLIENT, new ServerCapabilities(), clientInfo, protocolHandlers);
+		ETPConnection etpConnection = new ETPConnection(ConnectionType.CLIENT, caps, clientInfo, protocolHandlers);
 
-		ETPClient etpClient = ETPClient.getInstanceWithAuth_Basic(etpServerUri, etpConnection, 2000, login, password);
+		ETPClient etpClient = ETPClient.getInstanceWithAuth_Basic(etpServerUri, etpConnection, 2000, login, password, maxMsgSize);
 		logger.info(etpServerUri);
 
 		return etpClient;
@@ -175,7 +332,7 @@ public class Main {
 			}
 		}
 		logger.info(etpServerUri);
-		ClientInfo clientInfo = new ClientInfo(etpServerUri, 32768, 65536);
+		ClientInfo clientInfo = new ClientInfo(etpServerUri);
 		Map<CommunicationProtocol, ProtocolHandler> protocolHandlers = new HashMap<>();
 		protocolHandlers.put(CoreHandler_DefaultPrinter.protocol, new CoreHandler_DefaultPrinter());
 		protocolHandlers.put(DiscoveryHandler_DefaultPrinter.protocol, new DiscoveryHandler_DefaultPrinter());
@@ -224,7 +381,7 @@ public class Main {
 		}
 		logger.info(etpServerUri);
 
-		ClientInfo clientInfo = new ClientInfo(etpServerUri, 32768, 65536);
+		ClientInfo clientInfo = new ClientInfo(etpServerUri);
 		Map<CommunicationProtocol, ProtocolHandler> protocolHandlers = new HashMap<>();
 		protocolHandlers.put(CoreHandler_DefaultPrinter.protocol, new CoreHandler_DefaultPrinter());
 		protocolHandlers.put(StoreHandler_DefaultPrinter.protocol, new StoreHandler_DefaultPrinter());

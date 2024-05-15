@@ -15,6 +15,7 @@ limitations under the License.
 */
 package com.geosiris.etp.websocket;
 
+import Energistics.Etp.v12.Datatypes.DataValue;
 import Energistics.Etp.v12.Datatypes.SupportedDataObject;
 import Energistics.Etp.v12.Datatypes.Uuid;
 import Energistics.Etp.v12.Protocol.Core.OpenSession;
@@ -34,11 +35,13 @@ import org.eclipse.jetty.websocket.client.WebSocketClient;
 import java.net.ConnectException;
 import java.net.URI;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
 public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseable{
 	public static final Logger logger = LogManager.getLogger(ETPClient.class);
 
-	public static long MAX_PAYLOAD_SIZE = 65000;
+	public static int MAX_PAYLOAD_SIZE = 1 << 20;
 	private static MessageEncoding encoding = MessageEncoding.BINARY;
 
 	private ETPClientSession etpClientSession = null;
@@ -54,36 +57,55 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 
 	private List<SupportedDataObject> supportedDataObj;
 	private ETPConnection etpConnection;
+	public int maxMsgSize;
 
-	private ETPClient(HttpURI serverUri, ETPConnection etpConnection) {
+	private ETPClient(HttpURI serverUri, ETPConnection etpConnection, Integer maxMsgSize) {
 		super();
 		this.serverUri = serverUri;
 		this.openSession = null;
 		this.supportedDataObj = new ArrayList<>();
 		this.openSessiontId = -1;
 		this.etpConnection = etpConnection;
+		this.maxMsgSize = maxMsgSize;
 	}
 
 	public final static ETPClient getInstanceWithAuth_Basic(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String userName, String password){
+		return getInstanceWithAuth_Basic(url, etpConnection, connexionTimeout, userName, password, MAX_PAYLOAD_SIZE);
+	}
 
+	public final static ETPClient getInstanceWithAuth_Basic(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String userName, String password, Integer maxMsgSize){
 		String auth = null;
 		if (!userName.isEmpty()) {
 			String userpass = userName + ":" + password;
 			auth = "Basic " + new String(Base64.getEncoder().encode(userpass.getBytes())).trim();
 		}
-		return getInstance(url, etpConnection, connexionTimeout, auth);
+		return getInstance(url, etpConnection, connexionTimeout, auth, maxMsgSize);
 	}
 
 
 	public final static ETPClient getInstanceWithAuth_Token(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String token){
-		return getInstance(url, etpConnection, connexionTimeout, "Bearer " + token);
+		return getInstanceWithAuth_Token(url, etpConnection, connexionTimeout, token, MAX_PAYLOAD_SIZE);
 	}
 
-	public final static ETPClient getInstance(HttpURI serverUri, ETPConnection etpConnection, int connexionTimeout, String auth_basic_or_bearer){
-		ETPClient etpClient = new ETPClient(serverUri, etpConnection);
+	public final static ETPClient getInstanceWithAuth_Token(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String token, Integer maxMsgSize){
+		return getInstance(url, etpConnection, connexionTimeout, "Bearer " + token, maxMsgSize);
+	}
+
+	public final static ETPClient getInstance(HttpURI serverUri, ETPConnection etpConnection, int connexionTimeout, String auth_basic_or_bearer,
+											  Integer maxMsgSize){
+		if(maxMsgSize == null){
+			maxMsgSize = MAX_PAYLOAD_SIZE;
+		}
+		logger.info("MaxPayloadSize : " + maxMsgSize);
+
+		ETPClient etpClient = new ETPClient(serverUri, etpConnection, maxMsgSize);
 
 		try {
 			etpClient.wsclient = new WebSocketClient();
+//			etpClient.wsclient.setMaxTextMessageBufferSize(maxMsgSize);
+			etpClient.wsclient.setMaxBinaryMessageBufferSize(maxMsgSize);
+
+
 //			etpClient.wsclient = new WebSocketClient(new SslContextFactory());
 
 			logger.debug(serverUri);
@@ -91,8 +113,6 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 			URI echoUri = serverUri.toURI();
 
 			etpClient.wsclient.start();
-//			etpClient.wsclient.setMaxBinaryMessageBufferSize((int) MAX_PAYLOAD_SIZE);
-//			etpClient.wsclient.setMaxTextMessageBufferSize((int) MAX_PAYLOAD_SIZE);
 //			etpClient.wsclient.setMaxIdleTimeout(connexionTimeout);
 //			etpClient.wsclient.setMaxTextMessageBufferSize((int) etpClient.maxByteSizePerMessage);
 			ClientUpgradeRequest request = new ClientUpgradeRequest();
@@ -105,7 +125,15 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 			request.setHeader("etp-encoding", (encoding + "").toLowerCase());
 			request.setSubProtocols(etpConnection.SUB_PROTOCOL);
 			logger.debug("try to connect to " + echoUri);
-			etpClient.wsclient.connect(etpClient, echoUri, request);
+			Future<Session> futureSession = etpClient.wsclient.connect(etpClient, echoUri, request);
+			Session session = futureSession.get();
+
+			session.getPolicy().setMaxBinaryMessageBufferSize(maxMsgSize);
+			session.getPolicy().setMaxBinaryMessageSize(maxMsgSize);
+
+			etpConnection.getServerCapabilities().getEndpointCapabilities().put("MaxWebSocketMessagePayloadSize", DataValue.newBuilder().setItem(maxMsgSize).build());
+			etpConnection.clientInfo.setMAX_WEBSOCKET_FRAME_PAYLOAD_SIZE(maxMsgSize);
+			etpConnection.clientInfo.setMAX_WEBSOCKET_MESSAGE_PAYLOAD_SIZE(maxMsgSize);
 
 			logger.debug("Client connected to " + echoUri);
 
@@ -220,6 +248,14 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 		return etpConnection;
 	}
 
+	public WebSocketClient getWsclient() {
+		return wsclient;
+	}
+
+	public int getMaxMsgSize() {
+		return maxMsgSize;
+	}
+
 	@Override
 	public void onWebSocketConnect(Session session) {
 		super.onWebSocketConnect(session);
@@ -238,28 +274,31 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 //			RequestSession reqSess = ETPDefaultProtocolBuilder.buildRequestSession(uuid);
 			Date d = new Date();
 			RequestSession reqSess = RequestSession.newBuilder()
-				.setApplicationName(this.etpConnection.getServerCapabilities().getApplicationName() != null
-						? this.etpConnection.getServerCapabilities().getApplicationName()
-						: "etpproto-java (Geosiris)")
-				.setApplicationVersion(this.etpConnection.getServerCapabilities().getApplicationVersion() != null
-						? this.etpConnection.getServerCapabilities().getApplicationVersion()
-						: "1.0.2")
-				.setClientInstanceId(uuid)
-				.setCurrentDateTime(d.getTime())
-				.setEarliestRetainedChangeTime(0)
-				.setRequestedProtocols(this.etpConnection.getServerCapabilities().getSupportedProtocols() != null
-						? this.etpConnection.getServerCapabilities().getSupportedProtocols()
-						: new ArrayList<>())
-				.setSupportedDataObjects(this.etpConnection.getServerCapabilities().getSupportedDataObjects() != null
-						? this.etpConnection.getServerCapabilities().getSupportedDataObjects()
-						: new ArrayList<>())
-				.setSupportedCompression(this.etpConnection.getServerCapabilities().getSupportedCompression() != null
-						? this.etpConnection.getServerCapabilities().getSupportedCompression()
-						: new ArrayList<>())
-				.setSupportedFormats(this.etpConnection.getServerCapabilities().getSupportedFormats() != null
-						? this.etpConnection.getServerCapabilities().getSupportedFormats()
-						: new ArrayList<>())
-				.build();
+					.setApplicationName(this.etpConnection.getServerCapabilities().getApplicationName() != null
+							? this.etpConnection.getServerCapabilities().getApplicationName()
+							: "etpproto-java (Geosiris)")
+					.setApplicationVersion(this.etpConnection.getServerCapabilities().getApplicationVersion() != null
+							? this.etpConnection.getServerCapabilities().getApplicationVersion()
+							: "1.0.2")
+					.setClientInstanceId(uuid)
+					.setCurrentDateTime(d.getTime())
+					.setEarliestRetainedChangeTime(0)
+					.setEndpointCapabilities(etpConnection.getServerCapabilities().getEndpointCapabilities() != null
+							? this.etpConnection.getServerCapabilities().getEndpointCapabilities()
+							: new HashMap<>())
+					.setRequestedProtocols(this.etpConnection.getServerCapabilities().getSupportedProtocols() != null
+							? this.etpConnection.getServerCapabilities().getSupportedProtocols()
+							: new ArrayList<>())
+					.setSupportedDataObjects(this.etpConnection.getServerCapabilities().getSupportedDataObjects() != null
+							? this.etpConnection.getServerCapabilities().getSupportedDataObjects()
+							: new ArrayList<>())
+					.setSupportedCompression(this.etpConnection.getServerCapabilities().getSupportedCompression() != null
+							? this.etpConnection.getServerCapabilities().getSupportedCompression()
+							: new ArrayList<>())
+					.setSupportedFormats(this.etpConnection.getServerCapabilities().getSupportedFormats() != null
+							? this.etpConnection.getServerCapabilities().getSupportedFormats()
+							: new ArrayList<>())
+					.build();
 
 			logger.debug("==> Sending Request session\n" + reqSess);
 //		openSessiontId = etpClientSession.addPendingMessage(reqSess);

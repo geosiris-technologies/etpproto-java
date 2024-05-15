@@ -32,7 +32,15 @@ public class Pair<T, U> {
 	public U r() {
 		return right;
 	}
-	
+
+	public void setLeft(T left) {
+		this.left = left;
+	}
+
+	public void setRight(U right) {
+		this.right = right;
+	}
+
 	@Override
 	public String toString() {
 		return "( " + left + " ; " + right +" )";

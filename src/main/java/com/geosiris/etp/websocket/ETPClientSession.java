@@ -16,13 +16,14 @@ limitations under the License.
 package com.geosiris.etp.websocket;
 
 import Energistics.Etp.v12.Datatypes.DataValue;
-import Energistics.Etp.v12.Datatypes.ServerCapabilities;
 import Energistics.Etp.v12.Datatypes.SupportedProtocol;
 import Energistics.Etp.v12.Protocol.Core.Acknowledge;
-import com.geosiris.etp.communication.*;
+import com.geosiris.etp.communication.ETPinfo;
+import com.geosiris.etp.communication.Message;
+import com.geosiris.etp.communication.MessageEncoding;
+import com.geosiris.etp.communication.MessageFlags;
 import com.geosiris.etp.protocols.CommunicationProtocol;
 import com.geosiris.etp.protocols.ProtocolHandler;
-import com.geosiris.etp.protocols.handlers.StoreHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.websocket.api.Session;
@@ -31,6 +32,7 @@ import org.eclipse.jetty.websocket.api.StatusCode;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ETPClientSession implements Runnable{
 	public static final Logger logger = LogManager.getLogger(ETPClientSession.class);
@@ -145,14 +147,48 @@ public class ETPClientSession implements Runnable{
 	public List<Message> waitForResponse(long msgId, int maxWaitingTime) {
 		int currentWaitingTime = 0;
 		int sleepTime = 10; //Math.min(10, maxWaitingTime / 10);
-		while(currentWaitingTime < maxWaitingTime
-				&& ! this.receivedObjects.containsKey(msgId)) {
+		List<Message> res = getMessage(msgId, true, false);
+		while(wsSession.isOpen() && currentWaitingTime < maxWaitingTime
+				&& res == null
+		) {
 			try { Thread.sleep(sleepTime);
 			} catch (InterruptedException e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }
 			currentWaitingTime += sleepTime;
+			res = getMessage(msgId, true, false);
 		}
-		if(this.receivedObjects.containsKey(msgId)) {
-			return this.receivedObjects.get(msgId);
+		return res;
+	}
+
+	public Map<Long, List<Message>> waitForResponse(List<Long> msgIds, int maxWaitingTime) {
+		Map<Long, List<Message>> res = new HashMap<>();
+		int currentWaitingTime = 0;
+		int sleepTime = 10; //Math.min(10, maxWaitingTime / 10);
+
+		while(wsSession.isOpen() && currentWaitingTime < maxWaitingTime && res.size() < msgIds.size()) {
+			try { Thread.sleep(sleepTime);
+			} catch (InterruptedException e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }
+			currentWaitingTime += sleepTime;
+			for(Long msgId: msgIds) {
+				List<Message> msgs = getMessage(msgId, true, false);
+				if(msgs != null){
+					res.put(msgId, msgs);
+				}
+			}
+		}
+		if(res.size() < msgIds.size()){
+			logger.error("Not all message received (" + msgIds.stream().filter(k -> !res.containsKey(k)).map(String::valueOf).collect(Collectors.joining(", ")));
+		}
+		return res;
+	}
+
+	public List<Message> getMessage(long msgId, boolean clean, boolean partialIsOk){
+		if(this.receivedObjects.containsKey(msgId)
+				&& (partialIsOk || this.receivedObjects.get(msgId).stream().map(Message::isFinalMsg).reduce(Boolean.FALSE, Boolean::logicalOr))
+		){
+			List<Message> res = this.receivedObjects.get(msgId);
+			if(clean && !partialIsOk)
+				this.receivedObjects.remove(msgId);
+			return res;
 		}
 		return null;
 	}

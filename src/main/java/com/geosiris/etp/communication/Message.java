@@ -21,6 +21,9 @@ import Energistics.Etp.v12.Datatypes.Uuid;
 import Energistics.Etp.v12.Protocol.Core.ProtocolException;
 import com.geosiris.etp.ETPError;
 import com.geosiris.etp.utils.ETPUtils;
+import com.google.common.primitives.Chars;
+import com.google.gson.*;
+import org.apache.avro.Schema;
 import org.apache.avro.io.*;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
@@ -33,6 +36,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
@@ -78,6 +82,33 @@ public class Message {
 		} catch (IOException ignore) {
 		}
 		return bf.toString();
+	}
+
+	public static class InterfaceSerializer<T>
+			implements JsonDeserializer<T> {
+
+		private final Class<T> implementationClass;
+
+		private InterfaceSerializer(final Class<T> implementationClass) {
+			this.implementationClass = implementationClass;
+		}
+
+		static <T> InterfaceSerializer<T> interfaceSerializer(final Class<T> implementationClass) {
+			return new InterfaceSerializer<>(implementationClass);
+		}
+
+		@Override
+		public T deserialize(JsonElement jsonElement, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
+			return context.deserialize(jsonElement, implementationClass);
+		}
+	}
+
+	public static <T extends SpecificRecordBase> SpecificRecordBase decodeJson(String data, T obj) {
+		Gson gson = new GsonBuilder().registerTypeAdapter(CharSequence.class, new InterfaceSerializer<>(String.class))
+				.create();
+
+		return gson.fromJson(data, obj.getClass());
+//		return null;
 	}
 
 	public static Boolean isFinalePartialMsg(MessageHeader mh) {
