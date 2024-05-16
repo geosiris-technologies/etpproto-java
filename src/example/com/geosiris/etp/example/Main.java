@@ -15,12 +15,9 @@ limitations under the License.
 */
 package com.geosiris.etp.example;
 
-import Energistics.Etp.v12.Datatypes.AnyArray;
-import Energistics.Etp.v12.Datatypes.ArrayOfDouble;
+import Energistics.Etp.v12.Datatypes.*;
 import Energistics.Etp.v12.Datatypes.DataArrayTypes.DataArray;
-import Energistics.Etp.v12.Datatypes.DataValue;
 import Energistics.Etp.v12.Datatypes.Object.ContextScopeKind;
-import Energistics.Etp.v12.Datatypes.ServerCapabilities;
 import Energistics.Etp.v12.Protocol.DataArray.PutDataArrays;
 import Energistics.Etp.v12.Protocol.DataArray.PutDataArraysResponse;
 import com.geosiris.etp.communication.ClientInfo;
@@ -61,10 +58,10 @@ public class Main {
 //		etpClientTest2(args);
 //		test_big_message(args);
 //		test_multiple_data_array(args);
-//		test_get_big_data_array(args);
+		test_get_big_data_array(args);
 //		test_multiple_data_arraySmall(args);
 //		test_multiple_data_REST(args);
-		test_get_dataspaces(args);
+//		test_get_dataspaces(args);
 //		test_get_resources(args);
 //		test_big_messageREST(args);
 	}
@@ -217,12 +214,13 @@ public class Main {
 	}
 
 	public static void test_get_big_data_array(String[] args) throws Exception {
-		ETPClient client = getClient(1<<16, args);
+		ETPClient client = getClient(1<<22, args);
 
 		String uri = "eml:///dataspace('volve-eqn-plus')/resqml20.obj_Grid2dRepresentation(3a45fb70-8ba9-4341-a701-0f514270ba9c)";
 		try {
-			ETPHelper.sendGetDataArray(client, uri, "/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0", 50000);
-			Thread.sleep(3000000);
+//			ETPHelper.sendGetDataArray(client, uri, "/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0", 50000);
+			logger.info(ETPHelper.getMultipleDataArrays(client, uri, List.of("/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0"), 50000));
+//			Thread.sleep(3000000);
 		}finally {
 			client.closeClient();
 		}
@@ -385,12 +383,22 @@ public class Main {
 		protocolHandlers.put(CoreHandler_DefaultPrinter.protocol, new CoreHandler_DefaultPrinter());
 		protocolHandlers.put(DiscoveryHandler_DefaultPrinter.protocol, new DiscoveryHandler_DefaultPrinter());
 
-		ServerCapabilities caps = ServerCapabilities.newBuilder()
-				.setApplicationVersion("1.0.2")
-				.setApplicationName("GeosirisIlabTest")
-				.build();
+//		ServerCapabilities caps = ServerCapabilities.newBuilder()
+//				.setApplicationVersion("1.0.2")
+//				.setApplicationName("GeosirisIlabTest")
+//				.setContactInformation(Contact.newBuilder()
+//						.setContactPhone("")
+//						.setContactName("Valentin")
+//						.setContactEmail("valentin.gauthier@geosiris.com")
+//						.setOrganizationName("Geosiris")
+//						.build())
+//				.setSupportedDataObjects(new ArrayList<>())
+//				.setSupportedProtocols(new ArrayList<>(
+//
+//				))
+//				.build();
 
-		ETPConnection etpConnection = new ETPConnection(ConnectionType.CLIENT, caps, clientInfo, protocolHandlers);
+		ETPConnection etpConnection = new ETPConnection(ConnectionType.CLIENT, new ServerCapabilities(), clientInfo, protocolHandlers);
 
 		ETPClient etpClient = null;
 		if(true||args.length >= 3) {
@@ -409,44 +417,7 @@ public class Main {
 	}
 
 	public static void etpClientTest(String args[]){
-		logger.info("Usage : java -jar myfile.jar [SERVER_URL] [LOGIN] [PASSWORD]");
-
-		HttpURI etpServerUri = null;
-		String login = "";
-		String password = "";
-
-		if (args.length > 0) {
-			try { etpServerUri = new HttpURI(args[0]);
-			}catch(Exception e) {e.printStackTrace();}
-		}
-		if (args.length > 1) {
-			try { login = args[1];
-			}catch(Exception e) {e.printStackTrace();}
-		}
-		if (args.length > 2) {
-			try { password = args[2];
-			}catch(Exception e) {e.printStackTrace();}
-		}
-		logger.info(etpServerUri);
-
-		ClientInfo clientInfo = new ClientInfo(etpServerUri);
-		Map<CommunicationProtocol, ProtocolHandler> protocolHandlers = new HashMap<>();
-		protocolHandlers.put(CoreHandler_DefaultPrinter.protocol, new CoreHandler_DefaultPrinter());
-		protocolHandlers.put(StoreHandler_DefaultPrinter.protocol, new StoreHandler_DefaultPrinter());
-		protocolHandlers.put(DataspaceHandler_DefaultPrinter.protocol, new DataspaceHandler_DefaultPrinter());
-		protocolHandlers.put(DataArrayHandler_DefaultPrinter.protocol, new DataArrayHandler_DefaultPrinter());
-		protocolHandlers.put(DiscoveryHandler_DefaultPrinter.protocol, new DiscoveryHandler_DefaultPrinter());
-
-		ETPConnection etpConnection = new ETPConnection(ConnectionType.CLIENT, new ServerCapabilities(), clientInfo, protocolHandlers);
-
-		ETPClient etpClient = null;
-		if(true||args.length >= 3) {
-			etpClient = ETPClient.getInstanceWithAuth_Basic(etpServerUri, etpConnection, 2000, login, password);
-		}else if(args.length >= 3) {
-			etpClient = ETPClient.getInstanceWithAuth_Token(etpServerUri, etpConnection, 10000, args[1]);
-		}
-
-
+		ETPClient etpClient = getClient(args);
 
 		if(etpClient != null){
 			{

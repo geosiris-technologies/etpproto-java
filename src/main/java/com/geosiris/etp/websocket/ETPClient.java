@@ -342,7 +342,7 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 		super.onWebSocketError(cause);
 		logger.debug("@onWebSocketError error ");
 		if(cause instanceof ConnectException) {
-			logger.error("ETPClient connection exception");
+			logger.error("ETPClient connection exception {}", cause);
 			try {
 				wsclient.stop();
 			} catch (Exception e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }

@@ -17,7 +17,6 @@ package com.geosiris.etp.utils;
 
 import Energistics.Etp.v12.Datatypes.AnyArray;
 import Energistics.Etp.v12.Datatypes.AnyLogicalArrayType;
-import Energistics.Etp.v12.Datatypes.ArrayOfFloat;
 import Energistics.Etp.v12.Datatypes.DataArrayTypes.*;
 import Energistics.Etp.v12.Datatypes.Object.*;
 import Energistics.Etp.v12.Protocol.DataArray.*;
@@ -28,19 +27,15 @@ import Energistics.Etp.v12.Protocol.Store.GetDataObjectsResponse;
 import Energistics.Etp.v12.Protocol.Store.PutDataObjects;
 import com.geosiris.etp.communication.Message;
 import com.geosiris.etp.websocket.ETPClient;
-import org.apache.avro.reflect.MapEntry;
-import org.apache.avro.specific.SpecificRecordBase;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.w3c.dom.Document;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class ETPHelper {
 	public static final Logger logger = LogManager.getLogger(ETPHelper.class);
@@ -338,7 +333,6 @@ public class ETPHelper {
 		logger.debug("\t[{}]", String.join(",\n", subArrays.keySet()));
 
 		assert subArrays.size() + fullArrays.stream().map(x -> x.r().size()).reduce(0, (a,b) -> a + b) == datasets_paths.size();
-//		if(true) return result;
 
 		List<Long> msgIdsToWait = new ArrayList<>();
 		for(Pair<Long, List<String>> fk: fullArrays){
@@ -360,30 +354,25 @@ public class ETPHelper {
 		Map<Long, String> msgIdsToWaitSubArray = new HashMap<>();
 		for(Map.Entry<String, DataArrayMetadata> e_subArray: subArrays.entrySet()){
 			List<Long> dimensions = e_subArray.getValue().getDimensions();
-			long thisSize = e_subArray.getValue().getDimensions().stream().reduce(1L, (a, b) -> a * b) * eltSize;
 			Map<CharSequence, GetDataSubarraysType> mapSubArr = new HashMap<>();
 
-			long nbSplit = thisSize * eltSize / maxMsgSize;
-			for(int i=0; i<=nbSplit; i++) {
-				long sub_start = ((i) * maxMsgSize / eltSize);
-				long sub_stop = Math.min((i + 1) * maxMsgSize / eltSize, thisSize / eltSize);
-				long sub_size = sub_stop - sub_start;
+			long startLineIdx = 0;
+			long endLineIdx = 0;
+			long sizeOfLine = dimensions.size() > 1 ? dimensions.subList(1, dimensions.size()).stream().reduce(1L, (a, b) -> a * b) : 1;
+			long nbLinePerMsg = (maxMsgSize - securitySize) / (sizeOfLine * eltSize);
+			while(endLineIdx < dimensions.get(0)){
+				endLineIdx = Math.min(startLineIdx + nbLinePerMsg, dimensions.get(0));
 				List<Long> counts = new ArrayList<>();
 				List<Long> starts = new ArrayList<>();
-				List<Long> dim_reversed = new ArrayList<>(dimensions);
-				Collections.reverse(dim_reversed);
-				long tmp_sub_start = sub_start;
-				for(int di=0; di < dimensions.size(); di++){
-					if(di < dimensions.size() - 1) {
-						Long lineSize = dimensions.subList(di + 1, dimensions.size()).stream().reduce(1L, (subtotal, element) -> subtotal * element);
-						starts.add(tmp_sub_start / lineSize);
-						tmp_sub_start -= starts.get(di) * lineSize;
-						counts.add(sub_size/lineSize);
-					}else {
-						starts.add(tmp_sub_start);
-						counts.add(Math.min(dimensions.get(di), sub_size));
-					}
+
+				counts.add(endLineIdx - startLineIdx);
+				starts.add(startLineIdx);
+
+				for(int i=1; i<dimensions.size(); i++){
+					counts.add(dimensions.get(i));
+					starts.add(0L);
 				}
+				logger.debug("SubArr : Counts {} : Starts {}", counts , starts);
 				mapSubArr.put(String.valueOf(mapSubArr.size()),
 						GetDataSubarraysType.newBuilder()
 								.setCounts(counts)
@@ -394,18 +383,20 @@ public class ETPHelper {
 										.build()
 								).build()
 				);
-			}
-			GetDataSubarrays gdsa = GetDataSubarrays.newBuilder()
+				GetDataSubarrays gdsa = GetDataSubarrays.newBuilder()
 					.setDataSubarrays(mapSubArr).build();
-			long msgId = client.send(gdsa);
-			msgIdsToWaitSubArray.put(msgId, e_subArray.getKey());
+				long msgId = client.send(gdsa);
+				msgIdsToWaitSubArray.put(msgId, e_subArray.getKey());
+
+				startLineIdx = startLineIdx + nbLinePerMsg;
+			}
 		}
 
-		Map<String, List<GetDataSubarraysResponse>> subArrayResps = new HashMap<>();
+		Map<String, List<Message>> subArrayResps = new HashMap<>();
 
 		for(Map.Entry<Long, List<Message>> e_answers: client.getEtpClientSession().waitForResponse(msgIdsToWait, 500000).entrySet()){
 			List<Message> answers = e_answers.getValue();
-			for(Message answer: answers.stream().sorted((m0, m1) -> Integer.compare((int) m0.getHeader().getMessageId(), (int) m1.getHeader().getMessageId())).collect(Collectors.toList())) {
+			for(Message answer: answers.stream().sorted(Comparator.comparingInt(m0 -> (int) m0.getHeader().getMessageId())).collect(Collectors.toList())) {
 				if (answer.getBody() instanceof GetDataArraysResponse) {
 					GetDataArraysResponse gdar = ((GetDataArraysResponse) answer.getBody());
 					for(Map.Entry<CharSequence, DataArray> e_gdar: gdar.getDataArrays().entrySet()){
@@ -417,15 +408,6 @@ public class ETPHelper {
 						}
 
 					}
-//				} else if (answer.getBody() instanceof GetDataSubarraysResponse) {
-//					String identifier = msgIdsToWaitSubArray.get(e_answers.getKey());
-//					logger.debug("identifier : {}", identifier);
-//					logger.debug(String.join(", \n", ((GetDataSubarraysResponse) answer.getBody()).getDataSubarrays().keySet()));
-//					if(!subArrayResps.containsKey(identifier)){
-//						subArrayResps.put(identifier, new ArrayList<>());
-//					}
-//					subArrayResps.get(identifier).add(((GetDataSubarraysResponse) answer.getBody()));
-
 				} else {
 					logger.debug("Unexpected answer for msg : {}", answer.getHeader().getCorrelationId());
 				}
@@ -434,7 +416,7 @@ public class ETPHelper {
 
 		for(Map.Entry<Long, List<Message>> e_answers: client.getEtpClientSession().waitForResponse(new ArrayList<>(msgIdsToWaitSubArray.keySet()), 500000).entrySet()){
 			List<Message> answers = e_answers.getValue();
-			for(Message answer: answers.stream().sorted((m0, m1) -> Integer.compare((int) m0.getHeader().getMessageId(), (int) m1.getHeader().getMessageId())).collect(Collectors.toList())) {
+			for(Message answer: answers.stream().sorted(Comparator.comparingInt(m0 -> (int) m0.getHeader().getMessageId())).collect(Collectors.toList())) {
 				if (answer.getBody() instanceof GetDataSubarraysResponse) {
 					String identifier = msgIdsToWaitSubArray.get(e_answers.getKey());
 					logger.debug("identifier : {}", identifier);
@@ -442,7 +424,8 @@ public class ETPHelper {
 					if(!subArrayResps.containsKey(identifier)){
 						subArrayResps.put(identifier, new ArrayList<>());
 					}
-					subArrayResps.get(identifier).add(((GetDataSubarraysResponse) answer.getBody()));
+//					subArrayResps.get(identifier).add(((GetDataSubarraysResponse) answer.getBody()));
+					subArrayResps.get(identifier).add(answer);
 
 				} else {
 					logger.debug("Unexpected answer for msg : {}", answer.getHeader().getCorrelationId());
@@ -451,9 +434,11 @@ public class ETPHelper {
 		}
 
 		// For subArraysResponse : sort and reduce results for each array
-		for(Map.Entry<String, List<GetDataSubarraysResponse>> sub_arr_r: subArrayResps.entrySet()){
-			Map<CharSequence, DataArray> allSubArrayParts = sub_arr_r.getValue().stream().map(gdsr -> gdsr.getDataSubarrays().entrySet()).flatMap(Set::stream)
-					.collect(Collectors.toMap(Map.Entry<CharSequence, DataArray>::getKey, Map.Entry<CharSequence, DataArray>::getValue));
+		for(Map.Entry<String, List<Message>> sub_arr_r: subArrayResps.entrySet()){
+			/*Map<CharSequence, DataArray> allSubArrayParts =
+					sub_arr_r.getValue().stream()
+							.map(m_gdsr -> ((GetDataSubarraysResponse)m_gdsr.getBody()).getDataSubarrays().entrySet()).flatMap(Set::stream)
+							.collect(Collectors.toMap(Map.Entry<CharSequence, DataArray>::getKey, Map.Entry<CharSequence, DataArray>::getValue));
 			List<Number> numbers = allSubArrayParts.entrySet().stream()
 					.sorted(Comparator.comparingInt(e -> Integer.getInteger(e.getKey().toString())))
 					.map(e -> {
@@ -464,67 +449,24 @@ public class ETPHelper {
                         }
                     })
 					.flatMap(List::stream).collect(Collectors.toList());
-			result.put(sub_arr_r.getKey(),numbers);
+			result.put(sub_arr_r.getKey(),numbers);*/
+			List<Number> das = sub_arr_r.getValue().stream()
+                    .sorted(Comparator.comparingLong(m0 -> m0.getHeader().getMessageId()))
+                    .map(m -> ((GetDataSubarraysResponse) m.getBody()).getDataSubarrays().values())
+                    .flatMap(Collection::stream)
+                    .map(e -> {
+                        try {
+                            return (List<Number>) ETPUtils.getAttributeValue(e.getData().getItem(), "values");
+                        } catch (Exception ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }).filter(Objects::nonNull)
+					.flatMap(List::stream)
+					.collect(Collectors.toList());
+			result.put(sub_arr_r.getKey(), das);
 		}
 
 		return result;
-
-
-		/*Map<CharSequence, DataArrayIdentifier> mapIdentifier = new HashMap<>();
-		for(String ds_path: datasets_paths){
-			DataArrayIdentifier identifier = DataArrayIdentifier.newBuilder()
-					.setUri(uri)
-					.setPathInResource(ds_path)
-					.build();
-			mapIdentifier.put(String.valueOf(mapIdentifier.size()), identifier);
-		}
-
-		GetDataArrays gda = GetDataArrays.newBuilder()
-				.setDataArrays(mapIdentifier).build();
-		long msg_id = client.send(gda);
-		logger.debug(msg_id + ") GetDataSubArray sent " + gda);
-		List<Message> resp = client.getEtpClientSession().waitForResponse(msg_id, timeoutMS);
-		System.out.println("End Wait");
-//		if(true) return null;
-		Map<CharSequence, DataArray> da_entries = new HashMap<>();
-		for(Message m: resp){
-			if(m.getBody() instanceof GetDataArraysResponse){
-				GetDataArraysResponse gdar = (GetDataArraysResponse) m.getBody();
-				da_entries.putAll(gdar.getDataArrays());
-//                for(Map.Entry<CharSequence, DataArray> entry: gdar.getDataArrays().entrySet()){
-//					try {
-//						da_entries.set(Integer.getInteger(String.valueOf(entry.getKey())), entry.getValue());
-//					}catch (Exception e){
-//						System.err.println("Error for " + da_entries.size() + "idx " + entry.getKey() + " " + entry.getValue());
-//						e.printStackTrace();
-//					}
-//                }
-			}else{
-				logger.error("@getDataArray Unexpected answer : " + m.getBody());
-			}
-		}
-		for(Map.Entry<CharSequence, DataArray> c: da_entries.entrySet()){
-			System.out.println(c.getKey());
-		}
-		da_entries.entrySet().stream().filter(Objects::nonNull).forEach(a -> System.out.println("> " + a));
-		List<DataArray> da_list = da_entries.entrySet().stream().filter(Objects::nonNull).sorted(
-						Comparator.comparingInt(a -> Integer.getInteger(String.valueOf(a.getKey()))))
-				.map(Map.Entry::getValue).collect(Collectors.toList());
-
-		List<Integer> not_found = IntStream.range(0, datasets_paths.size()).filter( i -> !da_entries.containsKey(String.valueOf(i))).boxed().collect(Collectors.toList());
-		for(Integer i: not_found){
-			System.out.println("NOT FOUND : " + i);
-		}
-
-		for(DataArray da: da_list){
-			try {
-				result.addAll((Collection<? extends Number>) ETPUtils.getAttributeValue(da.getData().getItem(), "value"));
-			} catch (Exception e) {
-				logger.error(e);
-			}
-		}
-		return result;*/
-
 	}
 
 
