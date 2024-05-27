@@ -58,13 +58,55 @@ public class Main {
 //		etpClientTest2(args);
 //		test_big_message(args);
 //		test_multiple_data_array(args);
-		test_get_big_data_array(args);
+//		test_get_big_data_array(args);
 //		test_multiple_data_arraySmall(args);
 //		test_multiple_data_REST(args);
 //		test_get_dataspaces(args);
 //		test_get_resources(args);
-//		test_big_messageREST(args);
+//		test_big_messagePUTREST(args);
+//		test_get_big_data_array_REST(args);
+//		putDA_REST(args);
+		putDA_split(args);
 	}
+
+
+	public static void putDA_REST(String[] args) throws Exception {
+		AnyArray aa_points = ETPHelper.constructArray(List.of(0,1,2,3,4,5));
+
+		DataArray da = DataArray.newBuilder()
+				.setDimensions(List.of(2L, 3L))
+				.setData(aa_points)
+				.build();
+
+		ETPHelperREST.putDataArrays(args[0],
+				"eml:///dataspace('volve-eqn-plus')/resqml20.obj_Grid2dRepresentation(3a45fb70-8ba9-4341-a701-0f514270ba9c)",
+				List.of(new Pair<>("/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/a_fake_data", da)));
+	}
+
+	public static void putDA_split(String[] args) throws Exception {
+		ETPClient client = getClient(1<<18, args);
+		String uri = "eml:///dataspace('volve-eqn-plus')/resqml20.obj_Grid2dRepresentation(3a45fb70-8ba9-4341-a701-0f514270ba9c)";
+		String pathInRes = "/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/a_fake_data6";
+
+		try {
+
+			ETPHelper.sendPutDataArray(client,
+					uri,
+					pathInRes,
+					List.of(0,1,2,3,4,5,6,7,8),
+					List.of(3L, 3L),
+					AnyLogicalArrayType.arrayOfInt64BE,
+					AnyArrayType.arrayOfInt,
+					64 * 3 * 2
+			);
+		}finally {
+			client.closeClient();
+			client.close();
+		}
+		logger.info("{}", ETPHelperREST.getMultipleDataArrays(args[0], uri, List.of(pathInRes)));
+	}
+
+
 
 	public static void test_get_resources(String[] args) throws Exception {
 		logger.info(ETPHelperREST.getResources(args[0], new ETPUri("volve-eqn-plus").toString(), ContextScopeKind.self));
@@ -219,7 +261,24 @@ public class Main {
 		String uri = "eml:///dataspace('volve-eqn-plus')/resqml20.obj_Grid2dRepresentation(3a45fb70-8ba9-4341-a701-0f514270ba9c)";
 		try {
 //			ETPHelper.sendGetDataArray(client, uri, "/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0", 50000);
-			logger.info(ETPHelper.getMultipleDataArrays(client, uri, List.of("/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0"), 50000));
+			var m = ETPHelper.getMultipleDataArrays(client, uri, List.of("/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0"), 50000);
+//			logger.info(m);
+//			Thread.sleep(3000000);
+		}finally {
+			client.closeClient();
+		}
+
+	}
+
+	public static void test_get_big_data_array_REST(String[] args) throws Exception {
+		ETPClient client = getClient(1<<22, args);
+
+		String uri = "eml:///dataspace('volve-eqn-plus')/resqml20.obj_Grid2dRepresentation(3a45fb70-8ba9-4341-a701-0f514270ba9c)";
+		try {
+//			ETPHelper.sendGetDataArray(client, uri, "/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0", 50000);
+			var m = ETPHelperREST.getMultipleDataArrays(args[0], uri, List.of("/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0"));
+			logger.info(m.getClass());
+			logger.info((m.getDataArrays().values().iterator().next().getData().getItem()).getClass());
 //			Thread.sleep(3000000);
 		}finally {
 			client.closeClient();
@@ -264,7 +323,7 @@ public class Main {
 		}
 	}
 
-	public static void test_big_messageREST(String[] args) throws Exception {
+	public static void test_big_messagePUTREST(String[] args) throws Exception {
 		List<Double> values = new ArrayList<>();
 		int nbTr = 1000000;
 		for (int i = 0; i < nbTr; i++) {

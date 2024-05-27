@@ -15,8 +15,7 @@ limitations under the License.
 */
 package com.geosiris.etp.utils;
 
-import Energistics.Etp.v12.Datatypes.AnyArray;
-import Energistics.Etp.v12.Datatypes.AnyLogicalArrayType;
+import Energistics.Etp.v12.Datatypes.*;
 import Energistics.Etp.v12.Datatypes.DataArrayTypes.*;
 import Energistics.Etp.v12.Datatypes.Object.*;
 import Energistics.Etp.v12.Protocol.DataArray.*;
@@ -384,7 +383,7 @@ public class ETPHelper {
 								).build()
 				);
 				GetDataSubarrays gdsa = GetDataSubarrays.newBuilder()
-					.setDataSubarrays(mapSubArr).build();
+						.setDataSubarrays(mapSubArr).build();
 				long msgId = client.send(gdsa);
 				msgIdsToWaitSubArray.put(msgId, e_subArray.getKey());
 
@@ -451,16 +450,16 @@ public class ETPHelper {
 					.flatMap(List::stream).collect(Collectors.toList());
 			result.put(sub_arr_r.getKey(),numbers);*/
 			List<Number> das = sub_arr_r.getValue().stream()
-                    .sorted(Comparator.comparingLong(m0 -> m0.getHeader().getMessageId()))
-                    .map(m -> ((GetDataSubarraysResponse) m.getBody()).getDataSubarrays().values())
-                    .flatMap(Collection::stream)
-                    .map(e -> {
-                        try {
-                            return (List<Number>) ETPUtils.getAttributeValue(e.getData().getItem(), "values");
-                        } catch (Exception ex) {
-                            throw new RuntimeException(ex);
-                        }
-                    }).filter(Objects::nonNull)
+					.sorted(Comparator.comparingLong(m0 -> m0.getHeader().getMessageId()))
+					.map(m -> ((GetDataSubarraysResponse) m.getBody()).getDataSubarrays().values())
+					.flatMap(Collection::stream)
+					.map(e -> {
+						try {
+							return (List<Number>) ETPUtils.getAttributeValue(e.getData().getItem(), "values");
+						} catch (Exception ex) {
+							throw new RuntimeException(ex);
+						}
+					}).filter(Objects::nonNull)
 					.flatMap(List::stream)
 					.collect(Collectors.toList());
 			result.put(sub_arr_r.getKey(), das);
@@ -546,6 +545,78 @@ public class ETPHelper {
 			logger.debug(e.getMessage(), e);
 		}
 		return result;
+	}
+
+	public static void sendPutDataArray(ETPClient etpClient, String uri, String pathInResource, List<?> dataFlat, List<Long> dimensions, AnyLogicalArrayType alat, AnyArrayType aat, int maxSize){
+		Map<CharSequence, PutDataSubarraysType> map = new HashMap<>();
+		PutUninitializedDataArrays pud = PutUninitializedDataArrays.newBuilder()
+				.setDataArrays(
+						Map.of(
+								"0", PutUninitializedDataArrayType.newBuilder()
+										.setUid(DataArrayIdentifier.newBuilder()
+												.setPathInResource(pathInResource)
+												.setUri(uri)
+												.build()
+										).setMetadata(
+												DataArrayMetadata.newBuilder()
+														.setDimensions(dimensions)
+														.setStoreCreated(new Date().getTime())
+														.setStoreLastWrite(new Date().getTime())
+														.setLogicalArrayType(alat)
+														.setCustomData(new HashMap<>())
+														.setTransportArrayType(aat)
+														.build()
+										).build()
+						)
+				).build();
+		long pud_id = etpClient.send(pud);
+		List<Message> pud_resp = etpClient.getEtpClientSession().waitForResponse(pud_id, 50000);
+
+		long nbBitPerElt = getBitSize(alat);
+		Long nbEltPerLine = dimensions.subList(1, dimensions.size()).stream().reduce(1L, (a, b) -> a * b);
+		Long nbLinePerSplit = maxSize / (nbEltPerLine * nbBitPerElt);
+
+		final long nbLineInData = dataFlat.size() / nbEltPerLine;
+
+		for(long li=0; li<nbLineInData; li+=nbLinePerSplit) {
+			long first =  (li*nbEltPerLine);
+			long last = Math.min(dataFlat.size(), (int) ((li + nbLinePerSplit)*nbEltPerLine));
+
+			List<Long> counts = new ArrayList<>();
+			counts.add((last - first) / nbEltPerLine);
+			counts.addAll(dimensions.subList(1, dimensions.size()));
+
+			List<Long> starts = new ArrayList<>();
+			starts.add(li);
+			for(int di=1; di<dimensions.size(); di++){
+				starts.add(0L);
+			}
+
+			System.out.print("starts [");
+			starts.forEach(s -> System.out.print(s + ", "));
+			System.out.print("]\n");
+			System.out.print("counts[");
+			counts.forEach(s -> System.out.print(s + ", "));
+			System.out.print("]\n");
+			AnyArray aa = constructArray(dataFlat.subList((int) (li*nbEltPerLine), Math.min(dataFlat.size(), (int) ((li + nbLinePerSplit)*nbEltPerLine))));
+			DataArrayIdentifier dai = DataArrayIdentifier.newBuilder()
+					.setUri(uri)
+					.setPathInResource(pathInResource)
+					.build();
+			map.put(String.valueOf(map.size()), PutDataSubarraysType.newBuilder()
+					.setUid(dai)
+					.setData(aa)
+					.setStarts(starts)
+					.setCounts(counts)
+					.build()
+			);
+		}
+		PutDataSubarrays msg = PutDataSubarrays.newBuilder()
+				.setDataSubarrays(map).build();
+		long msg_id = etpClient.send(msg);
+		logger.info("Exporting : PP " + uri + "  " + pathInResource +  " msg id : " + msg_id + "\n");
+
+		List<Message> pdar = etpClient.getEtpClientSession().waitForResponse(msg_id, 50000);
 	}
 
 	public static Long sendGetDataSubArray_nowait(ETPClient etpClient, String uri, String pathInHDF5, Long[] start, Long[] count){
@@ -672,20 +743,26 @@ public class ETPHelper {
 	/* PutDataArray */
 
 	public static PutDataArrays buildPutDataArray(String uri, List<Pair<String, DataArray>> das){
-		Map<CharSequence, PutDataArraysType> map = new HashMap<>();
-		for(Pair<String, DataArray> pathAndDa: das) {
-			DataArrayIdentifier dai = DataArrayIdentifier.newBuilder()
-					.setUri(uri)
-					.setPathInResource(pathAndDa.l())
-					.build();
-			map.put(String.valueOf(map.size()), PutDataArraysType.newBuilder()
-					.setUid(dai)
-					.setArray(pathAndDa.r())
-					.build()
-			);
+		try {
+			Map<CharSequence, PutDataArraysType> map = new HashMap<>();
+			for (Pair<String, DataArray> pathAndDa : das) {
+				DataArrayIdentifier dai = DataArrayIdentifier.newBuilder()
+						.setUri(uri)
+						.setPathInResource(pathAndDa.l())
+						.build();
+				map.put(String.valueOf(map.size()), PutDataArraysType.newBuilder()
+						.setUid(dai)
+						.setArray(pathAndDa.r())
+						.setCustomData(new HashMap<>())
+						.build()
+				);
+			}
+			return PutDataArrays.newBuilder()
+					.setDataArrays(map).build();
+		}catch (Exception e){
+			e.printStackTrace();
 		}
-		return PutDataArrays.newBuilder()
-				.setDataArrays(map).build();
+		return null;
 	}
 
 	public static List<Message> sendPutDataArray(ETPClient etpClient, String uri, String pathInHDF5, DataArray da, int timeoutMS){
@@ -704,6 +781,51 @@ public class ETPHelper {
 		long msg_id = etpClient.send(msg);
 		return etpClient.getEtpClientSession().waitForResponse(msg_id, timeoutMS);
 	}
+
+	public static AnyArray constructArray(List<?> data){
+        if (data.get(0).getClass().equals(Double.class)) {
+            return AnyArray.newBuilder()
+                    .setItem(ArrayOfDouble.newBuilder()
+                            .setValues((List<Double>) data)
+                            .build()
+                    ).build();
+        } else if (data.get(0).getClass().equals(Integer.class)) {
+            return AnyArray.newBuilder()
+                    .setItem(ArrayOfInt.newBuilder()
+                            .setValues((List<Integer>) data)
+                            .build()
+                    ).build();
+        } else if (data.get(0).getClass().equals(Long.class)) {
+            return AnyArray.newBuilder()
+                    .setItem(ArrayOfLong.newBuilder()
+                            .setValues((List<Long>) data)
+                            .build()
+                    ).build();
+        } else if (data.get(0).getClass().equals(Float.class)) {
+            return AnyArray.newBuilder()
+                    .setItem(ArrayOfFloat.newBuilder()
+                            .setValues((List<Float>) data)
+                            .build()
+                    ).build();
+        } else if (data.get(0).getClass().equals(String.class)) {
+            return AnyArray.newBuilder()
+                    .setItem(ArrayOfString.newBuilder()
+                            .setValues((List<CharSequence>) data)
+                            .build()
+                    ).build();
+        } else if (data.get(0).getClass().equals(Boolean.class)) {
+            return AnyArray.newBuilder()
+                    .setItem(ArrayOfBoolean.newBuilder()
+                            .setValues((List<Boolean>) data)
+                            .build()
+                    ).build();
+        }
+        logger.error("Not supported type for any array {}", data);
+        if (!data.isEmpty())
+            logger.error("\t" + data.get(0));
+        return null;
+
+    }
 
 	public static void main(String[] argv){
 		String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><ns2:TriangulatedSetRepresentation xmlns=\"http://www.energistics.org/energyml/data/commonv2\" xmlns:ns2=\"http://www.energistics.org/energyml/data/resqmlv2\" uuid=\"f9a85fba-7f74-401f-99a2-03ff00a50086\" schemaVersion=\"2.2\" objectVersion=\"0\"><Citation><Title>null[Simplified]</Title><Creation>2023-10-27T17:04:25.403+02:00</Creation><LastUpdate>2023-10-27T17:04:25.404+02:00</LastUpdate><Description>A simplification of the representation null realised by Jerboa (a tool from University of Poitiers [FRANCE])</Description></Citation><ns2:TrianglePatch><ns2:NodeCount>10755</ns2:NodeCount><ns2:Triangles xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"IntegerExternalArray\"><NullValue>0</NullValue><CountPerValue>1</CountPerValue><Values><ExternalDataArrayPart><PathInExternalFile>RESQML/f9a85fba-7f74-401f-99a2-03ff00a50086triangle_patch0</PathInExternalFile></ExternalDataArrayPart></Values></ns2:Triangles><ns2:Geometry><ns2:Points xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:type=\"ns2:Point3dExternalArray\"><ns2:Coordinates><ExternalDataArrayPart><PathInExternalFile>RESQML/f9a85fba-7f74-401f-99a2-03ff00a50086point_patch0</PathInExternalFile></ExternalDataArrayPart></ns2:Coordinates></ns2:Points></ns2:Geometry></ns2:TrianglePatch> </ns2:TriangulatedSetRepresentation>";

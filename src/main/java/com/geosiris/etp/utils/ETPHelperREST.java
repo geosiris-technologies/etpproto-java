@@ -20,15 +20,23 @@ import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.api.Response;
+import org.eclipse.jetty.client.util.InputStreamResponseListener;
 import org.eclipse.jetty.client.util.StringContentProvider;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class ETPHelperREST {
-	public static final Logger logger = LogManager.getLogger(ETPHelperREST.class);
+    public static final Logger logger = LogManager.getLogger(ETPHelperREST.class);
 
     public final static String DATA_ARRAY = "data-array";
     public final static String DATASPACE = "dataspace";
@@ -74,16 +82,16 @@ public class ETPHelperREST {
     public static PutDataspacesResponse putDataspaces(String rootUrl, String dataspaceName) throws Exception {
         rootUrl = getHTTPUrl(rootUrl) + "/" + DATASPACE + "/put";
         return sendReq(rootUrl, PutDataspaces.newBuilder()
-                .setDataspaces(Map.of("0",
-                        Dataspace.newBuilder()
-                                .setUri(new ETPUri(dataspaceName).toString())
-                                .setPath("")
-                                .setStoreCreated(0)
-                                .setStoreLastWrite(0)
-                                .setCustomData(new HashMap<>())
-                                .build()
+                        .setDataspaces(Map.of("0",
+                                Dataspace.newBuilder()
+                                        .setUri(new ETPUri(dataspaceName).toString())
+                                        .setPath("")
+                                        .setStoreCreated(0)
+                                        .setStoreLastWrite(0)
+                                        .setCustomData(new HashMap<>())
+                                        .build()
                         ))
-                .build(),
+                        .build(),
                 new PutDataspacesResponse());
     }
 
@@ -94,22 +102,22 @@ public class ETPHelperREST {
     public static GetResourcesResponse getResources(String rootUrl, String uri, ContextScopeKind scope) throws Exception {
         rootUrl = getHTTPUrl(rootUrl) + "/" + DISCOVERY + "/get";
         return sendReq(rootUrl, GetResources.newBuilder()
-                .setScope(scope)
-                .setStoreLastWriteFilter(null)
-                .setCountObjects(false)
-                .setIncludeEdges(false)
-                .setContext(
-                        ContextInfo.newBuilder()
-                                .setUri(uri)
-                                .setDepth(1)
-                                .setNavigableEdges(RelationshipKind.Both)
-                                .setIncludeSecondarySources(true)
-                                .setIncludeSecondarySources(true)
-                                .setDataObjectTypes(new ArrayList<>())
-                                .build()
-                )
-                .setActiveStatusFilter(null)
-                .build(),
+                        .setScope(scope)
+                        .setStoreLastWriteFilter(null)
+                        .setCountObjects(false)
+                        .setIncludeEdges(false)
+                        .setContext(
+                                ContextInfo.newBuilder()
+                                        .setUri(uri)
+                                        .setDepth(1)
+                                        .setNavigableEdges(RelationshipKind.Both)
+                                        .setIncludeSecondarySources(true)
+                                        .setIncludeSecondarySources(true)
+                                        .setDataObjectTypes(new ArrayList<>())
+                                        .build()
+                        )
+                        .setActiveStatusFilter(null)
+                        .build(),
                 new GetResourcesResponse());
     }
 
@@ -120,7 +128,7 @@ public class ETPHelperREST {
     public static <T extends SpecificRecordBase> T sendReq(String rootUrl, List<Pair<String, String>> headers, SpecificRecordBase req, T res) throws Exception {
         String data = Message.encodeJson(req);
         HttpClient httpclient = new HttpClient();
-        logger.info("Sending data to {}", rootUrl);
+        logger.debug("Sending data to {}", rootUrl);
         Request request = httpclient.POST(rootUrl);
         for(Pair<String, String> head: headers){
             request.header(head.l(), head.r());
@@ -131,15 +139,24 @@ public class ETPHelperREST {
         T result = null;
         try {
             httpclient.start();
-            ContentResponse resp = request.send();
-                logger.error(resp.getStatus());
-            if(resp.getStatus() == 200) {
-                String reqAnswerContent = resp.getContentAsString();
-                logger.debug(reqAnswerContent);
-                result = (T) Message.decodeJson(reqAnswerContent, res);
-            }else {
-                logger.error(resp.getContentAsString());
+            InputStreamResponseListener listener = new InputStreamResponseListener();
+            request.send(listener);
+            Response resp = listener.get(600, TimeUnit.SECONDS);
+            if (resp.getStatus() == 200) {
+                try (InputStream input = listener.getInputStream()) {
+                    String reqAnswerContent = new BufferedReader(
+                            new InputStreamReader(input, StandardCharsets.UTF_8))
+                            .lines()
+                            .collect(Collectors.joining("\n"));
+                    result = (T) Message.decodeJson(reqAnswerContent, res);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            } else {
+                logger.error(resp.getReason());
             }
+        }catch (Exception e){
+            e.printStackTrace();
         }finally {
             httpclient.stop();
         }
@@ -147,7 +164,7 @@ public class ETPHelperREST {
     }
 
     public static String getUrlFromClient(ETPClient client){
-       return getHTTPUrl(client.getServerUri().toString());
+        return getHTTPUrl(client.getServerUri().toString());
     }
 
     public static String getHTTPUrl(String rootUrl){
