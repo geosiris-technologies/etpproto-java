@@ -41,6 +41,13 @@ import java.util.concurrent.Future;
 public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseable{
 	public static final Logger logger = LogManager.getLogger(ETPClient.class);
 
+
+
+	// TODO: autoriser d'ajouter un header pour pouvoir inclure les data-partition-id sinon pas de connexion avec OSDU
+
+
+
+
 	public static int MAX_PAYLOAD_SIZE = 1 << 20;
 	private static MessageEncoding encoding = MessageEncoding.BINARY;
 
@@ -73,26 +80,57 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 		return getInstanceWithAuth_Basic(url, etpConnection, connexionTimeout, userName, password, MAX_PAYLOAD_SIZE);
 	}
 
+	public final static ETPClient getInstanceWithAuth_Basic(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String userName, String password, Map<String, String> headers){
+		return getInstanceWithAuth_Basic(url, etpConnection, connexionTimeout, userName, password, MAX_PAYLOAD_SIZE, headers);
+	}
+
 	public final static ETPClient getInstanceWithAuth_Basic(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String userName, String password, Integer maxMsgSize){
+		return getInstanceWithAuth_Basic(url, etpConnection, connexionTimeout, userName, password, maxMsgSize, new HashMap<>());
+	}
+
+	public final static ETPClient getInstanceWithAuth_Basic(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String userName, String password, Integer maxMsgSize, Map<String, String> headers){
 		String auth = null;
 		if (!userName.isEmpty()) {
 			String userpass = userName + ":" + password;
 			auth = "Basic " + new String(Base64.getEncoder().encode(userpass.getBytes())).trim();
 		}
-		return getInstance(url, etpConnection, connexionTimeout, auth, maxMsgSize);
+		return getInstance(url, etpConnection, connexionTimeout, auth, maxMsgSize, headers);
 	}
-
 
 	public final static ETPClient getInstanceWithAuth_Token(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String token){
 		return getInstanceWithAuth_Token(url, etpConnection, connexionTimeout, token, MAX_PAYLOAD_SIZE);
+	}
+
+	public final static ETPClient getInstanceWithAuth_Token(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String token, Map<String, String> headers){
+		return getInstanceWithAuth_Token(url, etpConnection, connexionTimeout, token, MAX_PAYLOAD_SIZE, headers);
 	}
 
 	public final static ETPClient getInstanceWithAuth_Token(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String token, Integer maxMsgSize){
 		return getInstance(url, etpConnection, connexionTimeout, "Bearer " + token, maxMsgSize);
 	}
 
-	public final static ETPClient getInstance(HttpURI serverUri, ETPConnection etpConnection, int connexionTimeout, String auth_basic_or_bearer,
-											  Integer maxMsgSize){
+	public final static ETPClient getInstanceWithAuth_Token(HttpURI url, ETPConnection etpConnection, int connexionTimeout, String token, Integer maxMsgSize, Map<String, String> headers){
+		return getInstance(url, etpConnection, connexionTimeout, "Bearer " + token, maxMsgSize, headers);
+	}
+
+	public final static ETPClient getInstance(
+			HttpURI serverUri,
+			ETPConnection etpConnection,
+			int connexionTimeout,
+			String auth_basic_or_bearer,
+			Integer maxMsgSize
+	){
+		return getInstance(serverUri, etpConnection, connexionTimeout, auth_basic_or_bearer, maxMsgSize, new HashMap<>());
+	}
+
+	public final static ETPClient getInstance(
+			HttpURI serverUri,
+			ETPConnection etpConnection,
+			int connexionTimeout,
+			String auth_basic_or_bearer,
+			Integer maxMsgSize,
+			Map<String, String> headers
+	){
 		if(maxMsgSize == null){
 			maxMsgSize = MAX_PAYLOAD_SIZE;
 		}
@@ -105,7 +143,6 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 //			etpClient.wsclient.setMaxTextMessageBufferSize(maxMsgSize);
 			etpClient.wsclient.setMaxBinaryMessageBufferSize(maxMsgSize);
 
-
 //			etpClient.wsclient = new WebSocketClient(new SslContextFactory());
 
 			logger.debug(serverUri);
@@ -117,7 +154,12 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 //			etpClient.wsclient.setMaxTextMessageBufferSize((int) etpClient.maxByteSizePerMessage);
 			ClientUpgradeRequest request = new ClientUpgradeRequest();
 
-			if (auth_basic_or_bearer!=null && !auth_basic_or_bearer.isEmpty()) {
+
+			for(Map.Entry<String, String> e: headers.entrySet()){
+				request.setHeader(e.getKey(), e.getValue());
+			}
+
+			if (auth_basic_or_bearer != null && !auth_basic_or_bearer.isEmpty()) {
 				request.setHeader("Authorization", auth_basic_or_bearer);
 				logger.debug(request.getHeader("Authorization"));
 			}

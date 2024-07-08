@@ -18,15 +18,18 @@ package com.geosiris.etp.example;
 import Energistics.Etp.v12.Datatypes.*;
 import Energistics.Etp.v12.Datatypes.DataArrayTypes.DataArray;
 import Energistics.Etp.v12.Datatypes.Object.ContextScopeKind;
-import Energistics.Etp.v12.Protocol.DataArray.PutDataArrays;
 import Energistics.Etp.v12.Protocol.DataArray.PutDataArraysResponse;
+import Energistics.Etp.v12.Protocol.Dataspace.GetDataspaces;
 import com.geosiris.etp.communication.ClientInfo;
 import com.geosiris.etp.communication.ConnectionType;
 import com.geosiris.etp.communication.ETPConnection;
 import com.geosiris.etp.communication.Message;
 import com.geosiris.etp.protocols.CommunicationProtocol;
 import com.geosiris.etp.protocols.ProtocolHandler;
-import com.geosiris.etp.protocols.handlers.generated.*;
+import com.geosiris.etp.protocols.handlers.generated.CoreHandler_DefaultPrinter;
+import com.geosiris.etp.protocols.handlers.generated.DataArrayHandler_DefaultPrinter;
+import com.geosiris.etp.protocols.handlers.generated.DiscoveryHandler_DefaultPrinter;
+import com.geosiris.etp.protocols.handlers.generated.StoreHandler_DefaultPrinter;
 import com.geosiris.etp.utils.ETPHelper;
 import com.geosiris.etp.utils.ETPHelperREST;
 import com.geosiris.etp.utils.ETPUri;
@@ -39,6 +42,8 @@ import org.eclipse.jetty.http.HttpURI;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.util.*;
+
+import static com.geosiris.etp.utils.ETPHelperREST.getResources;
 
 public class Main {
 	public static Logger logger = LogManager.getLogger(Main.class);
@@ -66,9 +71,23 @@ public class Main {
 //		test_big_messagePUTREST(args);
 //		test_get_big_data_array_REST(args);
 //		putDA_REST(args);
-		putDA_split(args);
+//		putDA_split(args);
+		test_external_server(args);
 	}
 
+	public static void test_external_server(String[] args) throws Exception {
+		HashMap<String, String> map = new HashMap<>();
+		map.put("data-partition-id", "osdu");
+
+		ETPClient client = getClient(1<<22, args, map);
+		logger.info(ETPHelper.sendGetRessources_pretty(client, 1, ContextScopeKind.sourcesOrSelf, 5000));
+//		long msg_id = client.send(new GetDataspaces());
+//		for(Message msg: client.getEtpClientSession().waitForResponse(msg_id, 5000)){
+//			logger.info(msg);
+//		}
+
+		client.closeClient();
+	}
 
 	public static void putDA_REST(String[] args) throws Exception {
 		AnyArray aa_points = ETPHelper.constructArray(List.of(0,1,2,3,4,5));
@@ -106,10 +125,8 @@ public class Main {
 		logger.info("{}", ETPHelperREST.getMultipleDataArrays(args[0], uri, List.of(pathInRes)));
 	}
 
-
-
 	public static void test_get_resources(String[] args) throws Exception {
-		logger.info(ETPHelperREST.getResources(args[0], new ETPUri("volve-eqn-plus").toString(), ContextScopeKind.self));
+		logger.info(getResources(args[0], new ETPUri("volve-eqn-plus").toString(), ContextScopeKind.self));
 	}
 
 	public static void test_get_dataspaces(String[] args) throws Exception {
@@ -356,10 +373,15 @@ public class Main {
 	}
 
 	public static ETPClient getClient(Integer maxMsgSize, String[] args){
+		return getClient(maxMsgSize, args, new HashMap<>());
+	}
+
+	public static ETPClient getClient(Integer maxMsgSize, String[] args, Map<String, String> headers){
+		ETPClient etpClient = null;
 		logger.info("Usage : java -jar myfile.jar [SERVER_URL] [LOGIN] [PASSWORD]");
 
 		HttpURI etpServerUri = null;
-		String login = "";
+		String loginOrToken = "";
 		String password = "";
 
 		if (args.length > 0) {
@@ -371,7 +393,7 @@ public class Main {
 		}
 		if (args.length > 1) {
 			try {
-				login = args[1];
+				loginOrToken = args[1];
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -382,8 +404,19 @@ public class Main {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			etpClient = ETPClient.getInstanceWithAuth_Basic(etpServerUri, getConnection(etpServerUri), 2000, loginOrToken, password, maxMsgSize, headers);
+		}else{
+			etpClient = ETPClient.getInstanceWithAuth_Token(etpServerUri, getConnection(etpServerUri), 2000, loginOrToken, maxMsgSize, headers);
 		}
+
+		logger.info(etpServerUri);
+
+		return etpClient;
+	}
+
+	public static ETPConnection getConnection(HttpURI etpServerUri){
 		Map<CharSequence, DataValue> mapCaps = new HashMap<>();
+
 
 		ServerCapabilities caps = new ServerCapabilities();
 		caps.setEndpointCapabilities(mapCaps);
@@ -400,12 +433,7 @@ public class Main {
 //				.setContactInformation(Contact.newBuilder().setContactEmail("").setContactName("Val").setContactPhone("").build())
 //				.build();
 
-		ETPConnection etpConnection = new ETPConnection(ConnectionType.CLIENT, caps, clientInfo, protocolHandlers);
-
-		ETPClient etpClient = ETPClient.getInstanceWithAuth_Basic(etpServerUri, etpConnection, 2000, login, password, maxMsgSize);
-		logger.info(etpServerUri);
-
-		return etpClient;
+		return new ETPConnection(ConnectionType.CLIENT, caps, clientInfo, protocolHandlers);
 	}
 
 	public static void etpClientTest2(String args[]) {

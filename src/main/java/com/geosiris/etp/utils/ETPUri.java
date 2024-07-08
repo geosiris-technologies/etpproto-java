@@ -152,7 +152,7 @@ public class ETPUri {
 
         }
 
-        if(hasCollectionDomain() && hasDomainVersion()){
+        if(hasCollectionDomain() && hasCollectionDomainVersion()){
             res.append("/").append(collectionDomain).append(collectionDomainVersion);
             if(hasCollectionDomainType())
                 res.append(".").append(collectionDomainType);
