@@ -212,17 +212,29 @@ public class Message {
 
 			// BODY
 			Class<? extends SpecificRecordBase> etpObjClass = (Class<? extends SpecificRecordBase>) ProtocolsUtility.getEtpClassFromIds(this.header.getProtocol(), this.header.getMessageType());
-			logger.debug("OBJ CLASS : " + etpObjClass);
-			assert etpObjClass != null;
-			this.body = etpObjClass.getConstructor().newInstance();
-			ProtocolsUtility.decode(this.body, dec);
 
-			if(this.body == null){
-				Decoder dec2 = DecoderFactory.get().binaryDecoder(msg, null);
-				headerReader.read(this.header, dec2);
-				this.body = new ProtocolException();
+			if(etpObjClass == null){
+				// try with protocol 0 Core for protocolExceptions
+				etpObjClass = (Class<? extends SpecificRecordBase>) ProtocolsUtility.getEtpClassFromIds(0, this.header.getMessageType());
+				if(etpObjClass != null){
+					this.header.setProtocol(0);
+				}
+			}
+
+			if(etpObjClass != null) {
+				logger.debug("OBJ CLASS : " + etpObjClass);
+				assert etpObjClass != null;
+				this.body = etpObjClass.getConstructor().newInstance();
 				ProtocolsUtility.decode(this.body, dec);
 
+				if (this.body == null) {
+					Decoder dec2 = DecoderFactory.get().binaryDecoder(msg, null);
+					headerReader.read(this.header, dec2);
+					this.body = new ProtocolException();
+					ProtocolsUtility.decode(this.body, dec);
+				}
+			}else{
+				logger.error("No class found for protocol " + this.header.getProtocol() + " and type " + this.header.getMessageType());
 			}
 		} catch (Exception e) { logger.error(e.getMessage()); logger.debug(e.getMessage(), e); }
 	}

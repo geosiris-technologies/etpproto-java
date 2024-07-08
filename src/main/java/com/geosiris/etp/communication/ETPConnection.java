@@ -15,7 +15,10 @@ limitations under the License.
 */
 package com.geosiris.etp.communication;
 
+import Energistics.Etp.v12.Datatypes.DataValue;
 import Energistics.Etp.v12.Datatypes.ServerCapabilities;
+import Energistics.Etp.v12.Datatypes.SupportedProtocol;
+import Energistics.Etp.v12.Datatypes.Version;
 import Energistics.Etp.v12.Protocol.Core.Acknowledge;
 import Energistics.Etp.v12.Protocol.Core.CloseSession;
 import Energistics.Etp.v12.Protocol.Core.OpenSession;
@@ -46,6 +49,9 @@ public class ETPConnection {
     public ETPConnection(ConnectionType connectionType, ServerCapabilities serverCapabilities, ClientInfo clientInfo, Map<CommunicationProtocol, ProtocolHandler> protocolHandlers){
         this.connectionType = connectionType;
         this.serverCapabilities = serverCapabilities;
+        if(serverCapabilities.getSupportedProtocols() == null || serverCapabilities.getSupportedProtocols().isEmpty()){
+            serverCapabilities.setSupportedProtocols(computeSupportedProtocols(protocolHandlers));
+        }
         this.clientInfo = clientInfo;
         this.protocolHandlers = protocolHandlers;
 
@@ -146,6 +152,20 @@ public class ETPConnection {
         if(result.size()>0)
             result.get(result.size()-1).setFinalMsg(true);
         return result;
+    }
+
+    public static List<SupportedProtocol> computeSupportedProtocols(Map<CommunicationProtocol, ProtocolHandler> protocolHandlers){
+        List<SupportedProtocol> supported = new ArrayList<>();
+        for(Map.Entry<CommunicationProtocol, ProtocolHandler> ph: protocolHandlers.entrySet()){
+            supported.add(new SupportedProtocol(
+                    ph.getKey().id,
+                    new Version(),
+                    "store",
+                    new HashMap<>()
+            ));
+        }
+
+        return supported;
     }
 
     public Collection<byte[]> sendMsg(Collection<Message> msgs) {

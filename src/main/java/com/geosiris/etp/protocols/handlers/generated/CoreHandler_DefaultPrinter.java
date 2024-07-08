@@ -16,6 +16,7 @@ limitations under the License.
 package com.geosiris.etp.protocols.handlers.generated;
 
 import Energistics.Etp.v12.Datatypes.MessageHeader;
+import Energistics.Etp.v12.Datatypes.SupportedProtocol;
 import Energistics.Etp.v12.Protocol.Core.*;
 import com.geosiris.etp.communication.ClientInfo;
 import com.geosiris.etp.communication.Message;
@@ -55,6 +56,9 @@ public class CoreHandler_DefaultPrinter extends CoreHandler{
     @Override
     public Collection<Message> on_OpenSession(OpenSession msg, MessageHeader msgHeader, ClientInfo clientInfo) {
         logger.info("[CoreHandler_DefaultPrinter] received message" + msg);
+        for(SupportedProtocol sp:  msg.getSupportedProtocols()){
+            logger.info("\tProtocol " + sp.getProtocol() + " is supported in version " + sp.getProtocolVersion());
+        }
         return new ArrayList<>();
     }
 
