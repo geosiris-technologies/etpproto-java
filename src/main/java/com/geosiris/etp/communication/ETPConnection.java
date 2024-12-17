@@ -159,7 +159,7 @@ public class ETPConnection {
         for(Map.Entry<CommunicationProtocol, ProtocolHandler> ph: protocolHandlers.entrySet()){
             supported.add(new SupportedProtocol(
                     ph.getKey().id,
-                    new Version(),
+                    Version.newBuilder().setMajor(1).setMinor(2).build(), // TODO: change version when etp changes
                     "store",
                     new HashMap<>()
             ));

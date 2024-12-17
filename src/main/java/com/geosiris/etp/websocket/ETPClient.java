@@ -23,15 +23,18 @@ import Energistics.Etp.v12.Protocol.Core.RequestSession;
 import com.geosiris.etp.communication.*;
 import com.geosiris.etp.utils.ETPDefaultProtocolBuilder;
 import com.geosiris.etp.utils.ETPUtils;
+import com.google.gson.Gson;
 import org.apache.avro.specific.SpecificRecordBase;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jetty.http.HttpURI;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 
+import javax.net.ssl.SSLContext;
 import java.net.ConnectException;
 import java.net.URI;
 import java.util.*;
@@ -139,7 +142,11 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 		ETPClient etpClient = new ETPClient(serverUri, etpConnection, maxMsgSize);
 
 		try {
-			etpClient.wsclient = new WebSocketClient();
+
+			SslContextFactory sslContextFactory = new SslContextFactory();
+			sslContextFactory.setTrustAll(true);
+			etpClient.wsclient = new WebSocketClient(sslContextFactory);
+
 //			etpClient.wsclient.setMaxTextMessageBufferSize(maxMsgSize);
 			etpClient.wsclient.setMaxBinaryMessageBufferSize(maxMsgSize);
 
@@ -155,9 +162,6 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 			ClientUpgradeRequest request = new ClientUpgradeRequest();
 
 
-			for(Map.Entry<String, String> e: headers.entrySet()){
-				request.setHeader(e.getKey(), e.getValue());
-			}
 
 			if (auth_basic_or_bearer != null && !auth_basic_or_bearer.isEmpty()) {
 				request.setHeader("Authorization", auth_basic_or_bearer);
@@ -166,9 +170,16 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 
 			request.setHeader("etp-encoding", (encoding + "").toLowerCase());
 			request.setSubProtocols(etpConnection.SUB_PROTOCOL);
+
+			for(Map.Entry<String, String> e: headers.entrySet()){
+				request.setHeader(e.getKey(), e.getValue());
+			}
+
 			logger.debug("try to connect to " + echoUri);
+			logger.info("Headers : " + (new Gson()).toJson(request.getHeaders()));
 			Future<Session> futureSession = etpClient.wsclient.connect(etpClient, echoUri, request);
 			Session session = futureSession.get();
+
 
 			session.getPolicy().setMaxBinaryMessageBufferSize(maxMsgSize);
 			session.getPolicy().setMaxBinaryMessageSize(maxMsgSize);

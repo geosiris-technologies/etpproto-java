@@ -73,6 +73,7 @@ public class Main {
 //		putDA_REST(args);
 //		putDA_split(args);
 		test_external_server(args);
+//		test_get_big_data_array_2(args);
 	}
 
 	public static void test_external_server(String[] args) throws Exception {
@@ -280,6 +281,21 @@ public class Main {
 //			ETPHelper.sendGetDataArray(client, uri, "/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0", 50000);
 			var m = ETPHelper.getMultipleDataArrays(client, uri, List.of("/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0"), 50000);
 //			logger.info(m);
+//			Thread.sleep(3000000);
+		}finally {
+			client.closeClient();
+		}
+
+	}
+	public static void test_get_big_data_array_2(String[] args) throws Exception {
+		ETPClient client = getClient(1<<22, args);
+
+		String uri = "eml:///dataspace('bpmn')/resqml20.obj_PointSetRepresentation(91ef4b87-3d9d-4a3e-b753-8caa0cdc5931)";
+		try {
+//			ETPHelper.sendGetDataArray(client, uri, "/RESQML/3a45fb70-8ba9-4341-a701-0f514270ba9c/points_patch0", 50000);
+//			var m = ETPHelper.sendGetDataArray_prettier(client, uri, "/RESQML/6567dc5c-4bf5-491a-b019-bd067d355587/points_patch", 50000, true);
+			var m = ETPHelper.getMultipleDataArrays(client, uri, List.of("/RESQML/6567dc5c-4bf5-491a-b019-bd067d355587/points_patch"), 50000);
+			logger.info(m.values().iterator().next());
 //			Thread.sleep(3000000);
 		}finally {
 			client.closeClient();
