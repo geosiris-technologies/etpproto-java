@@ -161,7 +161,9 @@ public class ETPClient extends WebSocketAdapter implements Runnable, AutoCloseab
 //			etpClient.wsclient.setMaxTextMessageBufferSize((int) etpClient.maxByteSizePerMessage);
 			ClientUpgradeRequest request = new ClientUpgradeRequest();
 
-
+			//for(Map.Entry<String, String> e: headers.entrySet()){
+			//	request.setHeader(e.getKey(), e.getValue());
+			//}
 
 			if (auth_basic_or_bearer != null && !auth_basic_or_bearer.isEmpty()) {
 				request.setHeader("Authorization", auth_basic_or_bearer);
